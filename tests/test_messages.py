@@ -37,12 +37,89 @@ class TestAllMessages(TestCase):
             self.assertEqual(packed, obj.encode(), msg="packed vs encode for {}".format(constructor.__name__))
             self.assertEqual(obj.encode(), constructor.parse_and_decode(packed).encode(),
                              msg="encode vs repack for {}".format(constructor.__name__))
-            self.assertEqual(obj.__dict__, constructor.parse_and_decode(packed).__dict__)
-            with self.assertRaises(NotEnoughData):
+            self.assertEqual(obj.__dict__, constructor.parse_and_decode(packed).__dict__,
+                             msg="compare dict for {}".format(constructor.__name__))
+            with self.assertRaises(NotEnoughData,
+                                   msg="Message {} still works with too little data".format(constructor.__name__)):
                 constructor.parse_and_decode(packed[:-1])
-            with self.assertRaises(InvalidType):
+            with self.assertRaises(InvalidType,
+                                   msg="Message {} still works with wrong type number".format(constructor.__name__)):
                 constructor.parse_and_decode(b'\x00' + packed[1:])
 
     def test_strip(self):
         self.assertEqual(bytes_strip(b"abc\x00"), b"abc")
         self.assertEqual(bytes_strip(b"abc"), b"abc")
+
+    def test_connect_message(self):
+        m = Connect(1, b"cameron", b"password")
+        self.assertEqual(1, m.version)
+        self.assertEqual(b"cameron", m.username)
+        self.assertEqual(b"password", m.password)
+
+    def test_invalid_login_message(self):
+        m = InvalidLogin(InvalidLogin.Reasons.AccountDoesNotExist)
+        self.assertEqual(InvalidLogin.Reasons.AccountDoesNotExist, m.reason)
+
+    def test_invalid_version_message(self):
+        m = InvalidVersion(3, 2)
+        self.assertEqual(3, m.highest_supported_version)
+        self.assertEqual(2, m.lowest_supported_version)
+
+    def test_queue_position_message(self):
+        m = QueuePosition(3, 2, 1337)
+        self.assertEqual(3, m.queue_size)
+        self.assertEqual(2, m.queue_pos)
+        self.assertEqual(1337, m.rating)
+
+    def test_game_start_message(self):
+        m = GameStart(b"opp", 24)
+        self.assertEqual(b"opp", m.opponent_name)
+        self.assertEqual(24, m.opponent_rating)
+
+    def test_your_turn_message(self):
+        move = Move(1, 2, Direction.Positive, Direction.Positive)
+        board = Board([BoardLocation(True, False, True)] * 64)
+        m = YourTurn(move, board)
+        self.assertEqual(move, m.last_move)
+        self.assertEqual(board, m.board)
+
+    def test_make_move_message(self):
+        move = Move(1, 2, Direction.Positive, Direction.Positive)
+        m = MakeMove(move)
+        self.assertEqual(move, m.move)
+
+    def test_compulsory_move_message(self):
+        move = Move(1, 2, Direction.Positive, Direction.Positive)
+        board = Board([BoardLocation(True, False, True)] * 64)
+        m = CompulsoryMove(move, board)
+        self.assertEqual(move, m.move)
+        self.assertEqual(board, m.board)
+
+    def test_invalid_move_message(self):
+        move = Move(1, 2, Direction.Positive, Direction.Positive)
+        board = Board([BoardLocation(True, False, True)] * 64)
+        m = InvalidMove(move, board)
+        self.assertEqual(move, m.move)
+        self.assertEqual(board, m.board)
+
+    def test_opponent_disconnect_message(self):
+        m = OpponentDisconnect()
+        # No fields to test
+
+    def test_game_over_message(self):
+        move = Move(1, 2, Direction.Positive, Direction.Positive)
+        board = Board([BoardLocation(True, False, True)] * 64)
+        m = GameOver(0xFF, 1338, 1337, move, board)
+        self.assertEqual(0xFF, m.you_won)
+        self.assertEqual(1338, m.new_rating)
+        self.assertEqual(1337, m.old_rating)
+        self.assertEqual(move, m.winning_move)
+        self.assertEqual(board, m.board)
+
+    def test_re_queue_message(self):
+        m = ReQueue()
+        # no fields to test
+
+    def test_log_out_message(self):
+        m = LogOut()
+        # no fields to test
