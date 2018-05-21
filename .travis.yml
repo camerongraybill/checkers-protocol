@@ -2,6 +2,6 @@ language: python
 python:
   - "3.6"
 script:
-  - nosetests
+  - nosetests --with-coverage --cover-package=internal_types,server,client
 install:
   - pip install -e .
