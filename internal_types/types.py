@@ -1,5 +1,5 @@
-from enum import IntEnum
 from abc import ABC, abstractmethod
+from enum import IntEnum
 from typing import Iterable
 
 
@@ -27,8 +27,6 @@ class BoardLocation(Encodable):
     @staticmethod
     def from_bytes(raw: bytes):
         raw = int.from_bytes(raw, byteorder='big')
-        if raw & 4 == 0:
-            return None
         return BoardLocation(bool(raw & 4), bool(raw & 2), bool(raw & 1))
 
     def to_bytes(self):
@@ -50,12 +48,11 @@ class BoardLocation(Encodable):
 class Board(Encodable):
     def __init__(self, locations: Iterable[BoardLocation]):
         self.__state = [[BoardLocation(False, False, False)] * 8] * 8
-        i = 0
-        for v in locations:
-            if i == 64:
-                raise TypeError()
-            self.__state[i // 8][i % 8] = v
-            i += 1
+        locations = list(locations)
+        if len(locations) != 64:
+            raise TypeError()
+        for i in range(64):
+            self.__state[i // 8][i % 8] = locations[i]
 
     @staticmethod
     def from_bytes(raw: bytes) -> "Board":
@@ -67,6 +64,16 @@ class Board(Encodable):
         for i in reversed(range(64)):
             output_val |= (int.from_bytes(self.__state[i // 8][i % 8].to_bytes(), byteorder='big') << (i * 3))
         return output_val.to_bytes(length=24, byteorder='big')
+
+    def __getitem__(self, idx):
+        if isinstance(idx, tuple):
+            x, y = idx
+            return self.__state[x][y]
+        elif isinstance(idx, int):
+            return self.__state[idx]
+        else:
+            raise KeyError()
+
 
 
 class Direction(IntEnum):
