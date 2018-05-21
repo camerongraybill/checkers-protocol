@@ -1,9 +1,8 @@
 from unittest import TestCase
 
-from internal_types.types import Move, Board, Direction, BoardLocation
-
 from internal_types.messages import Connect, InvalidLogin, InvalidVersion, GameStart, QueuePosition, YourTurn, MakeMove, \
-    CompulsoryMove, InvalidMove, OpponentDisconnect, GameOver, ReQueue, LogOut
+    CompulsoryMove, InvalidMove, OpponentDisconnect, GameOver, ReQueue, LogOut, NotEnoughData, InvalidType
+from internal_types.types import Move, Board, Direction, BoardLocation
 
 
 class TestAllMessages(TestCase):
@@ -39,3 +38,7 @@ class TestAllMessages(TestCase):
             self.assertEqual(obj.encode(), constructor.parse_and_decode(packed).encode(),
                              msg="encode vs repack for {}".format(constructor.__name__))
             self.assertEqual(obj.__dict__, constructor.parse_and_decode(packed).__dict__)
+            with self.assertRaises(NotEnoughData):
+                constructor.parse_and_decode(packed[:-1])
+            with self.assertRaises(InvalidType):
+                constructor.parse_and_decode(b'\x00' + packed[1:])
