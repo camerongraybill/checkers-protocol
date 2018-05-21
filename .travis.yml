@@ -5,3 +5,5 @@ script:
   - nosetests --with-coverage --cover-package=internal_types,server,client
 install:
   - pip install -e .
+after_success:
+  - coveralls
