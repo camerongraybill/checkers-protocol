@@ -1,7 +1,7 @@
 from unittest import TestCase
 
 from internal_types.messages import Connect, InvalidLogin, InvalidVersion, GameStart, QueuePosition, YourTurn, MakeMove, \
-    CompulsoryMove, InvalidMove, OpponentDisconnect, GameOver, ReQueue, LogOut, NotEnoughData, InvalidType
+    CompulsoryMove, InvalidMove, OpponentDisconnect, GameOver, ReQueue, LogOut, NotEnoughData, InvalidType, bytes_strip
 from internal_types.types import Move, Board, Direction, BoardLocation
 
 
@@ -42,3 +42,7 @@ class TestAllMessages(TestCase):
                 constructor.parse_and_decode(packed[:-1])
             with self.assertRaises(InvalidType):
                 constructor.parse_and_decode(b'\x00' + packed[1:])
+
+    def test_strip(self):
+        self.assertEqual(bytes_strip(b"abc\x00"), b"abc")
+        self.assertEqual(bytes_strip(b"abc"), b"abc")

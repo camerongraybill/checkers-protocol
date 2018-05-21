@@ -47,9 +47,5 @@ class TestEncodableAbstract(TestCase):
         class test(Encodable):
             pass
 
-        x = test()
-        with self.assertRaises(NotImplementedError):
-            x.to_bytes()
-
-        with self.assertRaises(NotImplementedError):
-            x.from_bytes(b"a")
+        with self.assertRaises(TypeError):
+            x = test()
