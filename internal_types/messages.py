@@ -384,3 +384,24 @@ class LogOut(Message):
 
     def __init__(self):
         super(LogOut, self).__init__()
+
+
+__type_to_message = {
+    0x01: Connect,
+    0x02: InvalidLogin,
+    0x0D: InvalidVersion,
+    0x03: QueuePosition,
+    0x04: GameStart,
+    0x05: YourTurn,
+    0x06: MakeMove,
+    0x07: CompulsoryMove,
+    0x08: InvalidMove,
+    0x09: OpponentDisconnect,
+    0x0A: GameOver,
+    0x0B: ReQueue,
+    0x0C: LogOut
+}
+
+
+def message_to_type(raw: bytes) -> Message:
+    return __type_to_message[raw[0]]
