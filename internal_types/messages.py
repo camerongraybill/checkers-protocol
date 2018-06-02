@@ -66,7 +66,7 @@ class Message(ABC):
             raise NotEnoughData()
         if data[0] != cls.type:
             raise InvalidType()
-        return cls(*unpack('<' + cls.fmt, data[1:]))
+        return cls(*unpack('<' + cls.fmt, data[1:cls.calc_size() + 1]))
 
     def encode(self) -> bytes:
         """
@@ -74,6 +74,12 @@ class Message(ABC):
         :return: Buffer of bytes based on the format
         """
         return pack('<B' + self.fmt, *([self.type] + self.__args))
+
+    def __bytes__(self) -> bytes:
+        return self.encode()
+
+    def __repr__(self) -> str:
+        return "{}({})".format(self.__class__.__name__, self.__args)
 
 
 class Connect(Message):
@@ -107,7 +113,7 @@ class Connect(Message):
             raise NotEnoughData()
         if data[0] != cls.type:
             raise InvalidType()
-        res = unpack('<' + cls.fmt, data[1:])
+        res = unpack('<' + cls.fmt, data[1:cls.calc_size() + 1])
         return cls(res[0], bytes_strip(res[1]), bytes_strip(res[2]))
 
 
@@ -124,6 +130,7 @@ class InvalidLogin(Message):
         """
         AccountDoesNotExist = 0x00
         InvalidPassword = 0x01
+        AlreadyLoggedIn = 0x02
 
     def __init__(self, reason: Reasons):
         super(InvalidLogin, self).__init__(reason)
@@ -135,7 +142,7 @@ class InvalidLogin(Message):
             raise NotEnoughData()
         if data[0] != cls.type:
             raise InvalidType()
-        res = unpack('<' + cls.fmt, data[1:])
+        res = unpack('<' + cls.fmt, data[1:cls.calc_size() + 1])
         return cls(InvalidLogin.Reasons(res[0]))
 
     @property
@@ -213,7 +220,7 @@ class GameStart(Message):
             raise NotEnoughData()
         if data[0] != cls.type:
             raise InvalidType()
-        res = unpack('<' + cls.fmt, data[1:])
+        res = unpack('<' + cls.fmt, data[1:cls.calc_size() + 1])
         return cls(bytes_strip(res[0]), res[1])
 
 
@@ -240,7 +247,7 @@ class YourTurn(Message):
             raise NotEnoughData()
         if data[0] != cls.type:
             raise InvalidType()
-        res = unpack('<' + cls.fmt, data[1:])
+        res = unpack('<' + cls.fmt, data[1:cls.calc_size() + 1])
         return cls(Move.from_bytes(res[0]), Board.from_bytes(res[1]))
 
 
@@ -262,7 +269,7 @@ class MakeMove(Message):
             raise NotEnoughData()
         if data[0] != cls.type:
             raise InvalidType()
-        res = unpack('<' + cls.fmt, data[1:])
+        res = unpack('<' + cls.fmt, data[1:cls.calc_size() + 1])
         return cls(Move.from_bytes(res[0]))
 
 
@@ -289,7 +296,7 @@ class CompulsoryMove(Message):
             raise NotEnoughData()
         if data[0] != cls.type:
             raise InvalidType()
-        res = unpack('<' + cls.fmt, data[1:])
+        res = unpack('<' + cls.fmt, data[1:cls.calc_size() + 1])
         return cls(Move.from_bytes(res[0]), Board.from_bytes(res[1]))
 
 
@@ -316,7 +323,7 @@ class InvalidMove(Message):
             raise NotEnoughData()
         if data[0] != cls.type:
             raise InvalidType()
-        res = unpack('<' + cls.fmt, data[1:])
+        res = unpack('<' + cls.fmt, data[1:cls.calc_size() + 1])
         return cls(Move.from_bytes(res[0]), Board.from_bytes(res[1]))
 
 
@@ -366,7 +373,7 @@ class GameOver(Message):
             raise NotEnoughData()
         if data[0] != cls.type:
             raise InvalidType()
-        res = unpack('<' + cls.fmt, data[1:])
+        res = unpack('<' + cls.fmt, data[1:cls.calc_size() + 1])
         return cls(res[0], res[1], res[2], Move.from_bytes(res[3]), Board.from_bytes(res[4]))
 
 

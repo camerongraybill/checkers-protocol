@@ -10,7 +10,7 @@ from codecs import open
 from os import path
 
 # Always prefer setuptools over distutils
-from setuptools import setup, find_packages
+from setuptools import setup
 
 here = path.abspath(path.dirname(__file__))
 
@@ -106,7 +106,7 @@ setup(
     #
     #   py_modules=["my_module"],
     #
-    packages=find_packages(exclude=['spec', 'tests']),  # Required
+    packages=['client', 'internal_types', 'server'],  # Required
 
     # This field lists other packages that your project depends on to run.
     # Any package you put here will be installed by pip when your project is

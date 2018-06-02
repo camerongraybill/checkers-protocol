@@ -1,8 +1,6 @@
 from logging import getLogger
 from typing import List, Tuple
 
-from .session import Session
-
 
 class DuplicateUser(RuntimeError):
     """ Raised when a user is enqueued for a second time """
@@ -18,15 +16,15 @@ class QueueTooSmall(RuntimeError):
 
 class UserQueue:
     def __init__(self, logger=getLogger(__name__)):
-        self.__users: List[Session] = []
+        self.__users: List["Session"] = []
         self.__logger = logger
 
-    def enqueue_user(self, user_to_add: Session):
+    def enqueue_user(self, user_to_add: "Session"):
         if user_to_add in self.__users:
             raise DuplicateUser()
         self.__users.append(user_to_add)
 
-    def dequeue_user(self, user_to_remove: Session):
+    def dequeue_user(self, user_to_remove: "Session"):
         try:
             self.__users.remove(user_to_remove)
         except ValueError:
@@ -35,7 +33,7 @@ class UserQueue:
     def pop_closest_pair(self):
         if len(self) < 2:
             raise QueueTooSmall()
-        best_user_pair: Tuple[Session, Session] = (None, None)
+        best_user_pair: Tuple["Session", "Session"] = (None, None)
         smallest_diff = 100000000
         for user in self.__users:
             for inner_user in self.__users:
@@ -54,8 +52,11 @@ class UserQueue:
     def __contains__(self, item):
         return item in self.__users
 
-    def location_of(self, user: Session):
+    def location_of(self, user: "Session"):
         if user in self.__users:
             return self.__users.index(user)
         else:
             raise NotInQueue()
+
+    def __iter__(self):
+        return self.__users.__iter__()
