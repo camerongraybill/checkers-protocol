@@ -154,6 +154,8 @@ class Session:
     def on_game_end(self, last_move, board, rating_change, winner):
         self.__handle.write(
             GameOver(winner, self.__rating + rating_change, self.__rating, last_move, board).encode())
+        self.__server_db.set_rating(self.__username, self.__rating + rating_change)
+        self.__rating = self.__rating + rating_change
         self.current_state = ProtocolState.GAME_END
 
     def on_opponent_disconnect(self):

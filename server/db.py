@@ -27,16 +27,20 @@ class Database(ABC):
     def register_user(self, username: bytes, password: bytes, rating: int):
         raise NotImplementedError()
 
+    @abstractmethod
+    def set_rating(self, username: bytes, rating: int):
+        raise NotImplementedError()
+
 
 class DictionaryDB(Database):
     __entry = namedtuple("entry", ["password", "rating"])
 
     def __init__(self):
         self.__data = {
-            b"cam": self.__entry(b"mac", 3000),
-            b"andrei": self.__entry(b"ierdna", 2000),
-            b"safa": self.__entry(b"afas", 1000),
-            b"jen": self.__entry(b"nej", 1337),
+            b"cam": self.__entry(b"mac", 1200),
+            b"andrei": self.__entry(b"ierdna", 1200),
+            b"safa": self.__entry(b"afas", 1200),
+            b"jen": self.__entry(b"nej", 1201),
         }
 
     def auth_user(self, username: bytes, password: bytes):
@@ -56,3 +60,9 @@ class DictionaryDB(Database):
         if username in self.__data:
             raise Database.DuplicateUser()
         self.__data[username] = self.__entry(password, rating)
+
+    def set_rating(self, username: bytes, rating: int):
+        try:
+            self.__data[username].rating = rating
+        except KeyError:
+            raise Database.UserDoesNotExist()
