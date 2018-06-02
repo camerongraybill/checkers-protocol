@@ -9,6 +9,6 @@ from .client import Client
 def start():
     ui = Interface()
     l = pyuv.Loop()
-    s = Client("0.0.0.0", 1234, str.encode(argv[1]), str.encode(argv[2]), ui)
+    s = Client(argv[1], 1234, str.encode(argv[2]), str.encode(argv[3]), ui)
     s.start(l)
     l.run()

@@ -59,7 +59,7 @@ class TestBoardType(TestCase):
 
     def test_apply_move(self):
         b = Board.generate_game_start()
-        b.apply_move(Move(0, 2, Direction.Positive, Direction.Positive))
+        b.apply_move(Move(0, 2, Direction.Positive, Direction.Positive), Direction.Positive, False)
         self.assertEqual(BoardLocation(False, False, False), b[0, 2])
         self.assertEqual(BoardLocation(True, False, False), b[1, 3])
         with self.assertRaises(InvalidMove):
@@ -68,29 +68,30 @@ class TestBoardType(TestCase):
         with self.assertRaises(InvalidMove):
             # Try jumping your own piece
             b.apply_move(Move(0, 0, Direction.Positive, Direction.Positive))
-        b.apply_move(Move(1, 3, Direction.Positive, Direction.Positive))
-        b.apply_move(Move(2, 2, Direction.Negative, Direction.Positive))
+        b.apply_move(Move(1, 3, Direction.Positive, Direction.Positive), Direction.Positive, False)
+        b.apply_move(Move(2, 2, Direction.Negative, Direction.Positive), Direction.Positive, False)
         with self.assertRaises(InvalidMove):
-            b.apply_move(Move(3, 5, Direction.Negative, Direction.Negative))
-        b.apply_move(Move(1, 3, Direction.Negative, Direction.Positive))
+            # Try moving an opponent's piece
+            b.apply_move(Move(3, 5, Direction.Negative, Direction.Negative), Direction.Positive, False)
+        b.apply_move(Move(1, 3, Direction.Negative, Direction.Positive), Direction.Positive, False)
         # Jump!
-        b.apply_move(Move(3, 5, Direction.Negative, Direction.Negative))
+        b.apply_move(Move(3, 5, Direction.Negative, Direction.Negative), Direction.Negative, True)
         # Cheat a little bit to delete some pieces and check that promotion works
         b[2, 6] = BoardLocation(True, False, False)
         b[3, 7] = BoardLocation(False, False, False)
         # Move to the edge and promote
-        b.apply_move(Move(2, 6, Direction.Positive, Direction.Positive))
+        b.apply_move(Move(2, 6, Direction.Positive, Direction.Positive), Direction.Positive, False)
         self.assertTrue(b[3, 7].promoted)
 
         # Cheat a little to check moving to the bottom
         b[4, 2] = BoardLocation(True, False, True)
         b[2, 0] = BoardLocation(False, False, False)
-        b.apply_move(Move(4, 2, Direction.Negative, Direction.Negative))
+        b.apply_move(Move(4, 2, Direction.Negative, Direction.Negative), Direction.Negative, True)
         self.assertTrue(b[2, 0].promoted)
 
         # Try to move out of bounds
         with self.assertRaises(InvalidMove):
-            b.apply_move(Move(2, 0, Direction.Negative, Direction.Negative))
+            b.apply_move(Move(2, 0, Direction.Negative, Direction.Negative), Direction.Negative, True)
 
 
 class TestEncodableAbstract(TestCase):

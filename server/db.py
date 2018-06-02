@@ -35,7 +35,8 @@ class DictionaryDB(Database):
         self.__data = {
             b"cam": self.__entry(b"mac", 3000),
             b"andrei": self.__entry(b"ierdna", 2000),
-            b"safa": self.__entry(b"afas", 1000)
+            b"safa": self.__entry(b"afas", 1000),
+            b"jen": self.__entry(b"nej", 1337),
         }
 
     def auth_user(self, username: bytes, password: bytes):

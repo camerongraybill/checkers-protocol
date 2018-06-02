@@ -135,11 +135,9 @@ class Board(Encodable):
     def generate_game_start() -> "Board":
         """ Created from the point of view of the player moving top to bottom"""
         b = Board([BoardLocation(False, False, False)] * 64)
-        b[0, 0] = BoardLocation(True, True, True)
-        b[1, 1] = BoardLocation(True, True, False)
-        # for i in range(12):
-        #   b[((i % 4) * 2) + ((i // 4) % 2), i // 4] = BoardLocation(True, False, False)
-        #  b[((i % 4) * 2) + (((i // 4) + 1) % 2), 7 - (i // 4)] = BoardLocation(True, False, True)
+        for i in range(12):
+            b[((i % 4) * 2) + ((i // 4) % 2), i // 4] = BoardLocation(True, False, False)
+            b[((i % 4) * 2) + (((i // 4) + 1) % 2), 7 - (i // 4)] = BoardLocation(True, False, True)
 
         return b
 
@@ -261,11 +259,15 @@ class Board(Encodable):
     def __getitem__(self, idx: Union[int, Tuple[int, int]]) -> Union[BoardLocation, List[BoardLocation]]:
         if isinstance(idx, tuple):
             x, y = idx
+            if x < 0 or y < 0:
+                raise KeyError()
             try:
                 return self.__state[x][y]
             except IndexError:
                 raise KeyError()
         elif isinstance(idx, int):
+            if idx < 0:
+                raise KeyError()
             return self.__state[idx]
         else:
             raise KeyError()
