@@ -48,8 +48,9 @@ class Session:
                     self.__username = msg.username
                     self.__rating = self.__server_db.get_rating(self.__username)
                     self.__server_queue.enqueue_user(self)
-                    self.__handle.write(QueuePosition(len(self.__server_queue), self.__server_queue.location_of(self),
-                                                      self.rating).encode())
+                    self.__handle.write(
+                        QueuePosition(len(self.__server_queue), self.__server_queue.location_of(self) + 1,
+                                      self.rating).encode())
                     self.current_state = ProtocolState.IN_QUEUE
             except Database.UserDoesNotExist:
                 self.__handle.write(InvalidLogin(InvalidLogin.Reasons.AccountDoesNotExist).encode())

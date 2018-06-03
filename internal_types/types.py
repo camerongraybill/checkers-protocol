@@ -115,7 +115,7 @@ class Move(Encodable):
         return self.x_pos + 2 * self.x_direction.to_one, self.y_pos + 2 * self.y_direction.to_one
 
     def __repr__(self):
-        return str("{} -> {}".format(self.pos, self.after_move_pos))
+        return str("{} -> {}".format(tuple([x + 1 for x in self.pos]), tuple([x + 1 for x in self.after_move_pos])))
 
 
 class InvalidMove(RuntimeError):
@@ -164,8 +164,6 @@ class Board(Encodable):
     def get_possible_moves(self, allowed_y_direction: Direction = Direction.Positive, is_primary_payer: bool = True):
         retval = []
         print("Finding legal moves: ")
-        from client.Interface import Interface
-        Interface.display(self=None, board=self)
         for i in range(8):
             for j in range(8):
                 if self[i, j].used and (self[i, j].owner == is_primary_payer):
