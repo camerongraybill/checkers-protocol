@@ -19,8 +19,8 @@ def start():
     print(listen_for_addr())
     ui = Interface()
     l = pyuv.Loop()
-    if len(argv) < 4:
-        argv[3] = listen_for_addr()
+    if len(argv) == 3:
+        argv.append(listen_for_addr())
     s = Client(argv[3], 8864, str.encode(argv[1]), str.encode(argv[2]), ui)
     s.start(l)
     l.run()
