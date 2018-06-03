@@ -1,3 +1,7 @@
+"""
+This file has the custom types that were defined for the protocol
+"""
+
 from abc import ABC, abstractmethod
 from copy import deepcopy
 from enum import IntEnum
@@ -5,14 +9,22 @@ from typing import Iterable, Tuple, Union, List, Iterator
 
 
 class Encodable(ABC):
-
+    """ Abstract class to represent an object that can be encoded or decoded to and from bytes"""
     @staticmethod
     @abstractmethod
     def from_bytes(raw: bytes) -> "Encodable":
+        """
+        Parse an Encodable from bytes
+        :param raw: Buffer to parse from
+        """
         raise NotImplementedError()
 
     @abstractmethod
     def to_bytes(self) -> bytes:
+        """
+        Encode an encodable to bytes
+        :return: bytes representation of the encodable
+        """
         raise NotImplementedError()
 
     def __eq__(self, other: "Encodable"):
@@ -26,6 +38,8 @@ class Encodable(ABC):
 
 
 class BoardLocation(Encodable):
+    """ Represents a location on the board"""
+
     def __init__(self, used: bool, promoted: bool, owner: bool):
         self.__used = used
         self.__promoted = promoted
@@ -53,11 +67,16 @@ class BoardLocation(Encodable):
 
 
 class Direction(IntEnum):
+    """ Represents a direction for moves """
     Negative = 0x00
     Positive = 0x01
 
     @property
     def to_one(self) -> int:
+        """
+        Turn the Direction into -1 or +1
+        :return: -1 or +1
+        """
         if self == Direction.Positive:
             return 1
         elif self == Direction.Negative:
@@ -70,6 +89,7 @@ class Direction(IntEnum):
 
 
 class Move(Encodable):
+    """ Represents a move """
     def __init__(self, x_pos: int, y_pos: int, x_direction: Direction, y_direction: Direction):
         self.__x_pos = x_pos
         self.__y_pos = y_pos
@@ -124,6 +144,10 @@ class InvalidMove(RuntimeError):
 
 class Board(Encodable):
     def __init__(self, locations: Iterable[BoardLocation]):
+        """
+        Create a board from a list of board locations
+        :param locations:
+        """
         self.__state: List[List[BoardLocation]] = [x[:] for x in [[None] * 8] * 8]
         locations = list(locations)
         if len(locations) != 64:
@@ -133,7 +157,10 @@ class Board(Encodable):
 
     @staticmethod
     def generate_game_start() -> "Board":
-        """ Created from the point of view of the player moving top to bottom"""
+        """
+        Create a Board that is how the game starts
+        :return: A Board ready for a game of checkers
+        """
         b = Board([BoardLocation(False, False, False)] * 64)
         for i in range(12):
             b[((i % 4) * 2) + ((i // 4) % 2), i // 4] = BoardLocation(True, False, False)
@@ -153,17 +180,31 @@ class Board(Encodable):
         return output_val.to_bytes(length=24, byteorder='big')
 
     def translate_to_other_user(self) -> "Board":
+        """
+        Turn a Board into the board representation the secondary user sees by changing the ownership of pieces
+        :return: A Board with piece ownership changed
+        """
         return Board(
             (BoardLocation(x.used, x.promoted, (not x.owner) if x.used else False) for x in self.iterate_in_order()))
 
     def iterate_in_order(self) -> Iterator[BoardLocation]:
+        """
+        Iterate over a board in order from the top left to the bottom right
+        """
         for i in range(8):
             for j in range(8):
                 yield self.__state[i][j]
 
-    def get_possible_moves(self, allowed_y_direction: Direction = Direction.Positive, is_primary_payer: bool = True):
+    def get_possible_moves(self, allowed_y_direction: Direction = Direction.Positive, is_primary_payer: bool = True) -> \
+    Iterable[Move]:
+        """
+        Get all possible moves for a player at a current board state by trying each one and checking if it raises
+        an exception
+        :param allowed_y_direction: The Y direction the player is allowed to move
+        :param is_primary_payer: If the player is the primary player or not
+        :return: A list of possible moves
+        """
         retval = []
-        print("Finding legal moves: ")
         for i in range(8):
             for j in range(8):
                 if self[i, j].used and (self[i, j].owner == is_primary_payer):
@@ -171,18 +212,31 @@ class Board(Encodable):
                               (Direction.Negative, Direction.Positive), (Direction.Negative, Direction.Negative)]:
                         m = Move(i, j, *d)
                         try:
+                            # Try applying the move
                             deepcopy(self).apply_move(m, allowed_y_direction, is_primary_payer)
                             retval.append(m)
                         except InvalidMove:
                             pass
-        print(retval)
         return retval
 
-    def check_game_over(self, is_primary_user: bool):
+    def check_game_over(self, is_primary_user: bool) -> bool:
+        """
+        Check if the given player has won the game
+        :param is_primary_user: Whether the given player is the primary user or not
+        :return: The player won if they are the owner of all pieces
+        """
         return all(x.owner == is_primary_user for x in self.iterate_in_order() if x.used)
 
-    def get_required_moves(self, allowed_y_direction: Direction = Direction.Positive, is_primary_payer: bool = True):
+    def get_required_moves(self, allowed_y_direction: Direction = Direction.Positive, is_primary_payer: bool = True) -> \
+    Iterable[Move]:
+        """
+        Get a list of all required moves
+        :param allowed_y_direction: The y direction the player is allowed to move pieces
+        :param is_primary_payer: If the player is the primary player or not
+        :return: All the required moves the player must make
+        """
         def is_required(move: Move):
+            """ A move is required if it is jumping over another piece """
             try:
                 move_plus_one = self[move.after_move_pos]
                 move_plus_two = self[move.after_double_move_pos]
@@ -190,13 +244,16 @@ class Board(Encodable):
             except KeyError:
                 return False
 
-        required_moves = [x for x in self.get_possible_moves(allowed_y_direction, is_primary_payer) if is_required(x)]
-        print("Filtering to required: ")
-        print(required_moves)
-        return required_moves
+        return [x for x in self.get_possible_moves(allowed_y_direction, is_primary_payer) if is_required(x)]
 
     def apply_move(self, move: Move, allowed_y_direction: Direction = Direction.Positive,
                    is_primary_player: bool = True) -> None:
+        """
+        Apply a move to the board, raise InvalidMove if the move is not valid
+        :param move: The move to be applied
+        :param allowed_y_direction: The y direction the player can move their unpromoted pieces
+        :param is_primary_player: If the player is primary or not
+        """
         # Bounds Check
         start_coords = move.pos
         single_move_coords = move.after_move_pos
@@ -235,6 +292,10 @@ class Board(Encodable):
         self.__apply_move_no_check(move)
 
     def __apply_move_no_check(self, move: Move):
+        """
+        Do the actual work of moving the piece
+        :param move: The move to apply
+        """
         start_coords = move.pos
         single_move_coords = move.after_move_pos
         double_move_coords = move.after_double_move_pos
@@ -255,6 +316,11 @@ class Board(Encodable):
                 self[single_move_coords] = BoardLocation(True, True, start_pos.owner)
 
     def __getitem__(self, idx: Union[int, Tuple[int, int]]) -> Union[BoardLocation, List[BoardLocation]]:
+        """
+        Gets a location in the board, raising KeyError if a bounds check fails
+        :param idx: Index to check
+        :return: The Board location or a list of Board locations to represent a row
+        """
         if isinstance(idx, tuple):
             x, y = idx
             if x < 0 or y < 0:

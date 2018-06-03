@@ -1,3 +1,7 @@
+"""
+This file contains the all of the Messages objects to send between client and server
+They represent the PDUs from the spec
+"""
 from abc import ABC
 from enum import IntEnum
 from struct import unpack, pack, calcsize
@@ -6,6 +10,7 @@ from typing import List, Any
 from internal_types.types import Board, Move, Encodable
 
 
+# Exceptions
 class ParseError(RuntimeError):
     """ Raised when there is an error parsing """
 
@@ -18,6 +23,7 @@ class InvalidType(ParseError):
     """ Raised when you try to parse an invalid message """
 
 
+# Helper function
 def bytes_strip(buf: bytes) -> bytes:
     """
     Strip '\x00' from a buffer of bytes
@@ -30,10 +36,11 @@ def bytes_strip(buf: bytes) -> bytes:
         return buf
 
 
+# Messages
 class Message(ABC):
     """
     Generic abstract class for network messages
-    All Messages must have a format, size and type
+    All Messages must have a format and type
     """
     fmt: str = ""
     type: int = -1
@@ -74,9 +81,6 @@ class Message(ABC):
         :return: Buffer of bytes based on the format
         """
         return pack('<B' + self.fmt, *([self.type] + self.__args))
-
-    def __bytes__(self) -> bytes:
-        return self.encode()
 
     def __repr__(self) -> str:
         return "{}({})".format(self.__class__.__name__, self.__args)
@@ -411,4 +415,9 @@ __type_to_message = {
 
 
 def message_to_type(raw: bytes) -> Message:
+    """
+    Return the correct constructor for a message based on it's message type
+    :param raw: The raw buffer of bytes, where the first byte is the message type
+    :return: A Message constructor
+    """
     return __type_to_message[raw[0]]
