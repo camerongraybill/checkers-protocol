@@ -63,6 +63,6 @@ class DictionaryDB(Database):
 
     def set_rating(self, username: bytes, rating: int):
         try:
-            self.__data[username].rating = rating
+            self.__data[username] = self.__entry(self.__data[username].password, rating)
         except KeyError:
             raise Database.UserDoesNotExist()
