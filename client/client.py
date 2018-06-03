@@ -222,18 +222,18 @@ class Client:
             if msg.last_move == Move(0, 0, Direction.Negative, Direction.Negative):
                 self.__ui.display_message("You go first!")
             else:
-                self.__ui.display_message("Last Move was : {move}".format(move=msg.last_move))
+                self.__ui.display_message("Last Move was : {move}".format(move=msg.last_move.__repr__()))
             self.__ui.display(msg.board)
             self.__send(MakeMove(self.__ui.get_move()))
             self.__protocol_state = ProtocolState.PROCESSING_GAME_STATE
         elif isinstance(msg, CompulsoryMove):
             # This is the edge of the DFA from Processing Game State -> Processing Game State (Compulsory Move)
-            self.__ui.display_message("Compulsory Move: {move}".format(move=msg.move))
+            self.__ui.display_message("Compulsory Move: {move}".format(move=msg.move.__repr__()))
             self.__ui.display(msg.board)
         elif isinstance(msg, InvalidMove):
             # This is the edge of the DFA from Processing Game State -> User Move (Invalid Move)
             self.__protocol_state = ProtocolState.USER_MOVE
-            self.__ui.display_message("{move} Is an invalid move".format(move=msg.move))
+            self.__ui.display_message("{move} Is an invalid move".format(move=msg.move.__repr__()))
             self.__ui.display(msg.board)
             self.__send(MakeMove(self.__ui.get_move()))
             self.__protocol_state = ProtocolState.PROCESSING_GAME_STATE
