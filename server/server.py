@@ -55,16 +55,17 @@ class Server:
         self.__matchmaking_handler = pyuv.Timer(loop)
         self.__matchmaking_handler.start(self.__matchmake, 0, 5)
 
-        self.__advertiser = pyuv.UDP(loop)
-        self.__advertiser.bind((self.__ip, self.__port))
-        self.__advertiser.set_broadcast(True)
+        if self.__broadcast_ip:
+            self.__advertiser = pyuv.UDP(loop)
+            self.__advertiser.bind((self.__ip, self.__port))
+            self.__advertiser.set_broadcast(True)
 
-        self.__advertising_timer = pyuv.Timer(loop)
+            self.__advertising_timer = pyuv.Timer(loop)
 
-        def advertise(*args, **kwargs):
-            self.__advertiser.try_send((self.__broadcast_ip, self.__port), "\x64{}".format(self.__ip))
+            def advertise(*args, **kwargs):
+                self.__advertiser.try_send((self.__broadcast_ip, self.__port), b"checkers")
 
-        self.__advertising_timer.start(advertise, 1, 1)
+            self.__advertising_timer.start(advertise, 1, 1)
 
     def close(self):
         [c.disconnect(True) for c in self.__connections]
