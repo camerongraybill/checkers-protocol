@@ -9,13 +9,16 @@ from .queue import UserQueue, QueueTooSmall
 
 
 class Server:
-    def __init__(self, ip: str, port: int):
-        self.__ip = ip
+    def __init__(self, listen_ip: str, broadcast_ip: str, port: int):
+        self.__ip = listen_ip
+        self.__broadcast_ip = broadcast_ip
         self.__port = port
         self.__connections = []
         self.__handle = None
         self.__signal_handler = None
         self.__matchmaking_handler = None
+        self.__advertiser = None
+        self.__advertising_timer = None
         self.__queue = UserQueue()
         self.__db = DictionaryDB()
 
@@ -51,6 +54,16 @@ class Server:
 
         self.__matchmaking_handler = pyuv.Timer(loop)
         self.__matchmaking_handler.start(self.__matchmake, 0, 5)
+
+        self.__advertiser = pyuv.UDP(loop)
+        self.__advertiser.set_broadcast(True)
+
+        self.__advertising_timer = pyuv.Timer(loop)
+
+        def advertise(*args, **kwargs):
+            self.__advertiser.try_send((self.__broadcast_ip, self.__port), "\x64{}".format(self.__ip))
+
+        self.__advertising_timer.start(advertise, 1, 1)
 
     def close(self):
         [c.disconnect(True) for c in self.__connections]

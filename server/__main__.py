@@ -1,3 +1,5 @@
+from sys import argv
+
 import pyuv
 
 from .server import Server
@@ -5,6 +7,6 @@ from .server import Server
 
 def start():
     l = pyuv.Loop()
-    s = Server("0.0.0.0", 1234)
+    s = Server(argv[1], argv[2], 8864)
     s.start(l)
     l.run()
