@@ -56,6 +56,7 @@ class Server:
         self.__matchmaking_handler.start(self.__matchmake, 0, 5)
 
         self.__advertiser = pyuv.UDP(loop)
+        self.__advertiser.bind((self.__ip, self.__port))
         self.__advertiser.set_broadcast(True)
 
         self.__advertising_timer = pyuv.Timer(loop)
