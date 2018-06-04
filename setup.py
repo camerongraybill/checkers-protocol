@@ -114,7 +114,7 @@ setup(
     #
     # For an analysis of "install_requires" vs pip's requirements files see:
     # https://packaging.python.org/en/latest/requirements.html
-    install_requires=['pyyaml', 'coveralls', 'pyuv'],  # Optional
+    install_requires=['pyuv'],  # Optional
 
     # List additional groups of dependencies here (e.g. development
     # dependencies). Users will be able to install these using the "extras"
@@ -125,8 +125,8 @@ setup(
     # Similar to `install_requires` above, these must be valid existing
     # projects.
     extras_require={  # Optional
-        'dev': [],
-        'test': [],
+        'dev': ['pyyaml', 'coveralls'],
+        'test': ['nose'],
     },
 
     # To provide executable scripts, use entry points in preference to the
@@ -152,6 +152,8 @@ setup(
     # issues, where the source is hosted, where to say thanks to the package
     # maintainers, and where to support the project financially. The key is
     # what's used to render the link text on PyPI.
+    test_suite='nose.collector',  # Run tests with nose
+
     project_urls={  # Optional
         'Bug Reports': 'https://github.com/camerongraybill/python_tcp_checkers/issues',
         'Source': 'https://github.com/camerongraybill/python_tcp_checkers/',

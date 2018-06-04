@@ -267,16 +267,18 @@ class Board(Encodable):
         except KeyError:
             raise InvalidMove()
 
-        # If your piece is not promoted then you have to go one y direction
-        if (not start_pos.promoted) and move.y_direction != allowed_y_direction:
+        # If the position is not used then it's an invalid move
+        if not start_pos.used:
             raise InvalidMove()
 
         # If you don't own the piece, you can't move it
         if is_primary_player != start_pos.owner:
             raise InvalidMove()
-        # If the position is not used then it's an invalid move
-        if not start_pos.used:
+
+        # If your piece is not promoted then you have to go one y direction
+        if (not start_pos.promoted) and move.y_direction != allowed_y_direction:
             raise InvalidMove()
+
 
         # Check for jump stuff
         if single_move_pos.used:

@@ -16,6 +16,7 @@ class TestMoveType(TestCase):
         self.assertEqual((1, 2), m.pos)
         self.assertEqual((0, 3), m.after_move_pos)
         self.assertEqual((-1, 4), m.after_double_move_pos)
+        self.assertEqual("(2, 3) -> (1, 4)", m.__repr__())
 
 
 class TestBoardLocationType(TestCase):
@@ -34,6 +35,7 @@ class TestDirectionEnum(TestCase):
     def test_directions(self):
         self.assertEqual(1, Direction.Positive.to_one)
         self.assertEqual(-1, Direction.Negative.to_one)
+        self.assertEqual("-1", Direction.Negative.__repr__())
 
 
 class TestBoardType(TestCase):
@@ -64,12 +66,17 @@ class TestBoardType(TestCase):
         self.assertEqual(BoardLocation(True, False, False), b[1, 3])
         with self.assertRaises(InvalidMove):
             # Try moving a piece that doesn't exist
-            b.apply_move(Move(0, 2, Direction.Positive, Direction.Positive))
+            b.apply_move(Move(0, 2, Direction.Positive, Direction.Positive), Direction.Positive, False)
         with self.assertRaises(InvalidMove):
             # Try jumping your own piece
-            b.apply_move(Move(0, 0, Direction.Positive, Direction.Positive))
+            b.apply_move(Move(0, 0, Direction.Positive, Direction.Positive), Direction.Positive, False)
+        # Move a piece right
         b.apply_move(Move(1, 3, Direction.Positive, Direction.Positive), Direction.Positive, False)
+        # Move a piece left
         b.apply_move(Move(2, 2, Direction.Negative, Direction.Positive), Direction.Positive, False)
+        with self.assertRaises(InvalidMove):
+            # Try moving a piece the wrong direction
+            b.apply_move(Move(1, 3, Direction.Positive, Direction.Negative), Direction.Positive, False)
         with self.assertRaises(InvalidMove):
             # Try moving an opponent's piece
             b.apply_move(Move(3, 5, Direction.Negative, Direction.Negative), Direction.Positive, False)
@@ -92,6 +99,31 @@ class TestBoardType(TestCase):
         # Try to move out of bounds
         with self.assertRaises(InvalidMove):
             b.apply_move(Move(2, 0, Direction.Negative, Direction.Negative), Direction.Negative, True)
+
+    def test_get_all_moves(self):
+        b = Board([BoardLocation(False, False, False)] * 64)
+        b[0, 2] = BoardLocation(True, True, True)
+        self.assertListEqual(
+            [Move(0, 2, Direction.Positive, Direction.Positive), Move(0, 2, Direction.Positive, Direction.Negative)],
+            b.get_possible_moves(Direction.Negative, True))
+
+    def test_game_over(self):
+        b = Board([BoardLocation(False, False, False)] * 64)
+        b[0, 2] = BoardLocation(True, True, True)
+        b[1, 3] = BoardLocation(True, True, False)
+        self.assertFalse(b.check_game_over(True))
+        self.assertFalse(b.check_game_over(False))
+        b.apply_move(Move(0, 2, Direction.Positive, Direction.Positive), Direction.Negative, True)
+        self.assertTrue(b.check_game_over(True))
+        self.assertFalse(b.check_game_over(False))
+
+    def test_get_required_moves(self):
+        b = Board([BoardLocation(False, False, False)] * 64)
+        b[0, 2] = BoardLocation(True, True, True)
+        b[1, 3] = BoardLocation(True, True, False)
+        self.assertListEqual([Move(0, 2, Direction.Positive, Direction.Positive)],
+                             b.get_required_moves(Direction.Positive, True))
+        self.assertListEqual([], b.get_required_moves(Direction.Positive, False))
 
 
 class TestEncodableAbstract(TestCase):
