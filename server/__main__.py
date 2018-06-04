@@ -48,7 +48,8 @@ def get_args() -> Namespace:
     parser = ArgumentParser()
     parser.add_argument("--broadcast-ip", type=validate_ip_arg, required=True,
                         help="The Broadcast address to send Service Discovery messages to")
-    parser.add_argument("--listen-ip", type=int, help="The IP Address to listen for new connections on")
+    parser.add_argument("--listen-ip", type=validate_ip_arg, required=True,
+                        help="The IP Address to listen for new connections on")
     parser.add_argument("--verbose", action="store_true", default=False, help="Enable Logging")
 
     return parser.parse_args()
