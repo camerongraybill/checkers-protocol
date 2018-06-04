@@ -70,8 +70,9 @@ class Session:
             self.__username = None
             self.__current_state = ProtocolState.UNAUTHENTICATED
         try:
-            self.__handle.stop_read()
-            self.__handle.shutdown()
+            if self.__handle is not None and self.__handle.active:
+                self.__handle.stop_read()
+                self.__handle.shutdown()
         except Exception:
             # No matter what exception happens here, we don't care. Just close the connection.
             self.__logger.warning("Problem while disconnecting user {username}".format(username=username))
