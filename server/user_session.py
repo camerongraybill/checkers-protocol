@@ -142,6 +142,7 @@ class Session:
             self.disconnect()
         else:
             self.__send(OpponentDisconnect())
+            self.__game = None
             self.__current_state = ProtocolState.GAME_END
 
     def on_queue_position(self, queue_size: int, queue_position: int):
@@ -356,9 +357,20 @@ class Session:
         Logic to do while in Game End state
         :param msg: Message received
         """
+        if isinstance(msg, MakeMove):
+            # This is not in the DFA - NEED TO ADD
+            # (for when the client and server are one step out of sync and the client's opponent left)
+            if not self.__game:
+                self.__logger.info(
+                    "{user} made a move while in game end, happened because client and server were out of sync".format(
+                        user=self.username))
+            else:
+                self.__logger.warning(
+                    "Received invalid MakeMove message from {user} for state {state}".format(user=self.username,
+                                                                                             state=self.__current_state.name))
         if isinstance(msg, ReQueue):
             # This is the edge of the DFA from Game End to In Queue (ReQueue)
-            self.__logger.info("{} has rejoined the queue".format(self.username))
+            self.__logger.info("{user} has rejoined the queue".format(user=self.username))
             self.__server_queue.enqueue_user(self)
             self.__current_state = ProtocolState.IN_QUEUE
             self.__send(QueuePosition(len(self.__server_queue), self.__server_queue.location_of(self), self.rating))
