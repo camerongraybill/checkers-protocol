@@ -13,7 +13,7 @@ from server.user_session import Session
 class Server:
     """ The Server accepts incoming TCP connections and moves the TCP socket into a Session object. """
 
-    def __init__(self, listen_ip: str, port: int, session_creator: Callable[TCP, Session], logger: Logger):
+    def __init__(self, listen_ip: str, port: int, session_creator: Callable[[TCP], Session], logger: Logger):
         """
         Create a server object and initialize private members
         :param listen_ip: IP Address to listen on for new connections
