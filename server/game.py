@@ -43,6 +43,17 @@ class Game:
         # Request a move from the first player
         self.__next_to_go.on_request_move(Move(0, 0, Direction.Negative, Direction.Negative), self.__board)
 
+    def end_and_disconnect(self):
+        """
+        Called when the game is ended for reasons other than a player winning or a user disconnecting
+        Will disconnect the users
+        """
+        self.__logger.info(
+            "Force closing game between {userone} and {usertwo}".format(userone=self.__player_one.username,
+                                                                        usertwo=self.__player_two.username))
+        self.__player_one.disconnect(force=True)
+        self.__player_two.disconnect(force=True)
+
     def user_disconnect(self, user: "Session"):
         """
         Called when a user disconnects

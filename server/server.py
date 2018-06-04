@@ -23,7 +23,7 @@ class Server:
         """
         self.__ip = listen_ip
         self.__port = port
-        self.__connections: List[Session] = []
+        self.__connections: List[TCP] = []
         self.__handle: TCP = None
         self.__session_creator = session_creator
         self.__logger = logger
@@ -46,7 +46,7 @@ class Server:
             # Add it to internal connections and create a session
             session = self.__session_creator(new_connection)
             session.start()
-            self.__connections.append(session)
+            self.__connections.append(new_connection)
 
     def start(self, loop: Loop):
         """
@@ -64,7 +64,7 @@ class Server:
         """
         Must close all clients when disconnecting
         """
-        self.__logger.info("Stopped accepting new connections, closing all connections")
-        [c.disconnect(force=True) for c in self.__connections]
-        if self.__handle:
+        self.__logger.info("Stopped accepting new connections, closing all connections that are open")
+        [c.close() for c in self.__connections if c.active]
+        if self.__handle is not None and self.__handle.active:
             self.__handle.close()

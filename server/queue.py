@@ -132,6 +132,10 @@ class UserQueue:
         self.__logger.info("Stopping matchmaker")
         if self.__matchmaking_handler:
             self.__matchmaking_handler.stop()
+        self.__logger.info("Stopping all running games")
+        [x.end_and_disconnect() for x in self.__games]
+        self.__logger.info("Disconnecting all users in queue")
+        [user.disconnect(force=True) for user in self.__users]
 
     def __iter__(self):
         return self.__users.__iter__()

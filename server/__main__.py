@@ -104,10 +104,10 @@ def start():
             :param signal: The signal that was received
             """
             logger.info("Caught signal {signal}, shutting down".format(signal=signal))
-            s.close()
+            sig_handler.stop()
             queue.stop()
             a.stop()
-            sig_handler.stop()
+            s.close()
             loop.stop()
 
         # Bind the objects to the event loop
@@ -119,6 +119,6 @@ def start():
         # Run the event Loop
         loop.run()
         s_exit(0)
-    except ArgumentError as e:
-        print("Argument Error: {}".format(e))
+    except ArgumentError:
+        logger.error("Argument Error: ", exc_info=True)
         s_exit(1)
