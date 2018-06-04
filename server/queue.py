@@ -102,9 +102,10 @@ class UserQueue:
         self.__matchmaking_handler = Timer(loop)
         self.__matchmaking_handler.start(self.__make_match, 0, 5)
 
-    def __make_match(self):
+    def __make_match(self, timer_handle: Timer):
         """
         Create a game from the two closest users
+        :param timer_handle: The timer handle, not used
         """
         try:
             user_one, user_two = self.pop_closest_pair()
