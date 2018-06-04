@@ -156,7 +156,7 @@ class Session:
         else:
             self.__send(QueuePosition(queue_size, queue_position, self.rating))
 
-    def on_game_start(self, opponent_name: bytes, opponent_rating: int, game: Game):
+    def on_game_start(self, opponent_name: bytes, opponent_rating: int, game: "Game"):
         """
         Called when a match is made and the user is added to a game
         STATEFUL this being called is the edge of the DFA from In Queue to Processing Game State (Game Start)
