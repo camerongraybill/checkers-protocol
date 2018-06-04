@@ -4,7 +4,7 @@ If the package was installed correctly with pip or setuptools, then this file wi
 Otherwise, it can be executed (from the root directory) with `python -m server`
 """
 from argparse import ArgumentParser, ArgumentError, Namespace
-from logging import getLogger, DEBUG, INFO, basicConfig
+from logging import getLogger, DEBUG, INFO, WARNING, basicConfig
 from signal import SIGINT
 from socket import inet_aton, error as socket_error
 from sys import exit as s_exit
@@ -50,9 +50,13 @@ def get_args() -> Namespace:
                         help="The Broadcast address to send Service Discovery messages to")
     parser.add_argument("--listen-ip", type=validate_ip_arg, required=True,
                         help="The IP Address to listen for new connections on")
-    parser.add_argument("--verbose", action="store_true", default=False, help="Enable Logging")
+    parser.add_argument("--verbose", action="store_true", default=False, help="Enable Debug Logging")
+    parser.add_argument("--quiet", action="store_true", default=False, help="Only log warning and above")
 
-    return parser.parse_args()
+    args = parser.parse_args()
+    if args.verbose and args.quiet:
+        raise ArgumentError(None, "Cannot have verbose AND quiet logging, please only pick --verbose or --quiet")
+    return args
 
 
 def start():
@@ -69,6 +73,8 @@ def start():
         # Set the log level if not in verbose mode
         if not args.verbose:
             logger.setLevel(INFO)
+        if args.quiet:
+            logger.setLevel(WARNING)
 
         # Allocate a database and register some test users
         db = DictionaryDB(logger)
