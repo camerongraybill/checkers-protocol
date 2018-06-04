@@ -308,7 +308,9 @@ class Session:
             # This is the edge of the DFA from Processing Game State to Unauthenticated (Log Out)
             self.__logger.info("{user} logged out".format(user=self.username))
             # User leaves game
-            self.__game.user_disconnect(self)
+            g = self.__game
+            self.__game = None
+            g.user_disconnect(self)
             self.__current_state = ProtocolState.UNAUTHENTICATED
             self.__rating = None
             self.__username = None
@@ -335,8 +337,10 @@ class Session:
         elif isinstance(msg, LogOut):
             # This is the edge of the DFA from User Move to Unauthenticated (Log Out)
             self.__logger.info("{user} logged out".format(user=self.username))
-            self.__game.user_disconnect(self)
+            # User leaves game
+            g = self.__game
             self.__game = None
+            g.user_disconnect(self)
             self.__username = None
             self.__rating = None
             self.__current_state = ProtocolState.UNAUTHENTICATED
