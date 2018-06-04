@@ -114,20 +114,7 @@ setup(
     #
     # For an analysis of "install_requires" vs pip's requirements files see:
     # https://packaging.python.org/en/latest/requirements.html
-    install_requires=['pyuv'],  # Optional
-
-    # List additional groups of dependencies here (e.g. development
-    # dependencies). Users will be able to install these using the "extras"
-    # syntax, for example:
-    #
-    #   $ pip install sampleproject[dev]
-    #
-    # Similar to `install_requires` above, these must be valid existing
-    # projects.
-    extras_require={  # Optional
-        'dev': ['pyyaml', 'coveralls'],
-        'test': ['nose'],
-    },
+    install_requires=['pyuv', 'pyyaml', 'coveralls', 'nose'],  # Optional
 
     # To provide executable scripts, use entry points in preference to the
     # "scripts" keyword. Entry points provide cross-platform support and allow
