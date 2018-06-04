@@ -10,6 +10,7 @@ from typing import Iterable, Tuple, Union, List, Iterator
 
 class Encodable(ABC):
     """ Abstract class to represent an object that can be encoded or decoded to and from bytes"""
+
     @staticmethod
     @abstractmethod
     def from_bytes(raw: bytes) -> "Encodable":
@@ -90,6 +91,7 @@ class Direction(IntEnum):
 
 class Move(Encodable):
     """ Represents a move """
+
     def __init__(self, x_pos: int, y_pos: int, x_direction: Direction, y_direction: Direction):
         self.__x_pos = x_pos
         self.__y_pos = y_pos
@@ -204,7 +206,7 @@ class Board(Encodable):
         :param is_primary_payer: If the player is the primary player or not
         :return: A list of possible moves
         """
-        retval = []
+        possible_moves = []
         for i in range(8):
             for j in range(8):
                 if self[i, j].used and (self[i, j].owner == is_primary_payer):
@@ -214,10 +216,10 @@ class Board(Encodable):
                         try:
                             # Try applying the move
                             deepcopy(self).apply_move(m, allowed_y_direction, is_primary_payer)
-                            retval.append(m)
+                            possible_moves.append(m)
                         except InvalidMove:
                             pass
-        return retval
+        return possible_moves
 
     def check_game_over(self, is_primary_user: bool) -> bool:
         """
@@ -228,13 +230,14 @@ class Board(Encodable):
         return all(x.owner == is_primary_user for x in self.iterate_in_order() if x.used)
 
     def get_required_moves(self, allowed_y_direction: Direction = Direction.Positive, is_primary_payer: bool = True) -> \
-    Iterable[Move]:
+            Iterable[Move]:
         """
         Get a list of all required moves
         :param allowed_y_direction: The y direction the player is allowed to move pieces
         :param is_primary_payer: If the player is the primary player or not
         :return: All the required moves the player must make
         """
+
         def is_required(move: Move):
             """ A move is required if it is jumping over another piece """
             try:
@@ -251,16 +254,16 @@ class Board(Encodable):
         """
         Apply a move to the board, raise InvalidMove if the move is not valid
         :param move: The move to be applied
-        :param allowed_y_direction: The y direction the player can move their unpromoted pieces
+        :param allowed_y_direction: The y direction the player can move their pieces that are not promoted
         :param is_primary_player: If the player is primary or not
         """
         # Bounds Check
-        start_coords = move.pos
-        single_move_coords = move.after_move_pos
-        double_move_coords = move.after_double_move_pos
+        start_coordinates = move.pos
+        single_move_coordinates = move.after_move_pos
+        double_move_coordinates = move.after_double_move_pos
         try:
-            start_pos = self[start_coords]
-            single_move_pos = self[single_move_coords]
+            start_pos = self[start_coordinates]
+            single_move_pos = self[single_move_coordinates]
         except KeyError:
             raise InvalidMove()
 
@@ -282,11 +285,11 @@ class Board(Encodable):
                 raise InvalidMove()
             # Bounds check
             try:
-                after_jump_dest = self[double_move_coords]
+                after_jump_destination = self[double_move_coordinates]
             except KeyError:
                 raise InvalidMove()
             # If there is a piece where you want to move to, you can't
-            if after_jump_dest.used:
+            if after_jump_destination.used:
                 raise InvalidMove()
 
         self.__apply_move_no_check(move)
@@ -296,24 +299,24 @@ class Board(Encodable):
         Do the actual work of moving the piece
         :param move: The move to apply
         """
-        start_coords = move.pos
-        single_move_coords = move.after_move_pos
-        double_move_coords = move.after_double_move_pos
-        start_pos = self[start_coords]
-        single_move_pos = self[single_move_coords]
-        self[start_coords] = BoardLocation(False, False, False)
+        start_coordinates = move.pos
+        single_move_coordinates = move.after_move_pos
+        double_move_coordinates = move.after_double_move_pos
+        start_pos = self[start_coordinates]
+        single_move_pos = self[single_move_coordinates]
+        self[start_coordinates] = BoardLocation(False, False, False)
         if single_move_pos.used:
-            self[double_move_coords] = start_pos
+            self[double_move_coordinates] = start_pos
             # If it is at one of the ends, promote it
             if move.after_double_move_pos[1] in [0, 7]:
-                self[double_move_coords] = BoardLocation(True, True, start_pos.owner)
+                self[double_move_coordinates] = BoardLocation(True, True, start_pos.owner)
             # Remove the piece you jumped
-            self[single_move_coords] = BoardLocation(False, False, False)
+            self[single_move_coordinates] = BoardLocation(False, False, False)
         else:
-            self[single_move_coords] = start_pos
+            self[single_move_coordinates] = start_pos
             # If it is at one of the ends, promote it
             if move.after_move_pos[1] in [0, 7]:
-                self[single_move_coords] = BoardLocation(True, True, start_pos.owner)
+                self[single_move_coordinates] = BoardLocation(True, True, start_pos.owner)
 
     def __getitem__(self, idx: Union[int, Tuple[int, int]]) -> Union[BoardLocation, List[BoardLocation]]:
         """

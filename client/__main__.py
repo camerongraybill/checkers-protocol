@@ -76,7 +76,7 @@ def start():
     """
     Start the client application by allocating a logger, parsing args and then forwarding the args on to the client
     """
-    basicConfig(format='%(levelname)s:%(message)s', level=DEBUG)
+    basicConfig(format='%(levelname)s(%(asctime)s):%(message)s', level=DEBUG)
     logger = getLogger()
     try:
         try:
@@ -101,9 +101,10 @@ def start():
             s.start(loop)
         except KeyboardInterrupt:
             s_exit(1)
-        # Run the event loop
-        loop.run()
-        s_exit(0)
+        else:
+            # Run the event loop
+            loop.run()
+            s_exit(0)
     except ArgumentError as e:
         print("Argument Error: {}".format(e))
         s_exit(1)

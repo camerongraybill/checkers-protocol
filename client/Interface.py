@@ -110,7 +110,7 @@ class Interface:
         else:
             return self.prompt_play_again()
 
-    def request_creds(self) -> Tuple[bytes, bytes]:
+    def request_credentials(self) -> Tuple[bytes, bytes]:
         """
         Prompt the user for username and password
         :return: Username and password

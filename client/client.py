@@ -188,7 +188,7 @@ class Client:
             }
             self.__ui.display_message("Invalid Login, {reason}".format(reason=bad_login_reasons[msg.reason]))
             # Request a new set of credentials from the user
-            self.__username, self.__password = self.__ui.request_creds()
+            self.__username, self.__password = self.__ui.request_credentials()
             self.__send(Connect(1, self.__username, self.__password))
             self.__protocol_state = ProtocolState.IN_QUEUE
         elif isinstance(msg, InvalidVersion):

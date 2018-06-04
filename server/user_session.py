@@ -1,179 +1,179 @@
+""" This file contains the Session class which implements the server side of the Protocol """
+
+from logging import Logger
+from typing import Optional
+
 from pyuv import TCP, errno
 
 from internal_types.messages import message_to_type, Message, Connect, InvalidLogin, InvalidVersion, QueuePosition, \
-    LogOut, MakeMove, ReQueue, CompulsoryMove, YourTurn, InvalidMove, GameOver, OpponentDisconnect, GameStart
+    LogOut, MakeMove, ReQueue, CompulsoryMove, YourTurn, InvalidMove, GameOver, OpponentDisconnect, GameStart, \
+    NotEnoughData
 from internal_types.states import ProtocolState
+from internal_types.types import Board, Move
 from .db import Database
 from .game import InvalidMoveException
-from .queue import DuplicateUser, NotInQueue
+from .queue import DuplicateUser, NotInQueue, UserQueue
 
 
 class Session:
-    def __init__(self, handle: TCP, queue, database_connection: Database):
+    """ STATEFUL
+    the __current_state for this is the protocol state for this user's connection to the server
+    The Session class represent's a user that is connected to the server
+    """
+    supported_versions = [1]
+
+    def __init__(self, handle: TCP, queue: UserQueue, database_connection: Database, logger: Logger):
+        """
+        Create a session for the given TCP handle which is unique to this session,
+        and keep references to the queue and database
+        Also initialize some variables like the current state
+        :param handle: The TCP Socket this session works on
+        :param queue: The Queue used on this server
+        :param database_connection: The database on this server
+        :param logger: The logger to log to
+        """
         self.__handle = handle
-        self.current_state = ProtocolState.UNAUTHENTICATED
+        self.__current_state = ProtocolState.UNAUTHENTICATED
         self.__server_queue = queue
         self.__server_db = database_connection
         self.__game: "Game" = None
-        self.__rating = None
-        self.__username = None
-        handle.start_read(self.on_data)
+        self.__rating: int = None
+        self.__username: bytes = None
+        self.__logger = logger
+
+    # Public Methods
+
+    def start(self):
+        """
+        Start reading from the socket
+        """
+        self.__logger.info("Started New Session")
+        self.__handle.start_read(self.__on_data)
 
     def disconnect(self, force=False):
+        """
+        Disconnect the user from the server
+        :param force: If true, do not cleanly shut down and clear the state of the socket
+        """
+        username = self.username
         if not force:
+            # Remove the user from the queue
             if self in self.__server_queue:
                 self.__server_queue.dequeue_user(self)
-            if self.__game:
+            # Cleanly close the user's game
+            if self.__game is not None:
                 self.__game.user_disconnect(self)
                 self.__game = None
+            # Reset all session variables to defaults
             self.__rating = None
             self.__username = None
-            self.current_state = ProtocolState.UNAUTHENTICATED
+            self.__current_state = ProtocolState.UNAUTHENTICATED
         try:
             self.__handle.stop_read()
             self.__handle.shutdown()
-        except:
-            pass
+        except Exception:
+            # No matter what exception happens here, we don't care. Just close the connection.
+            self.__logger.warning("Problem while disconnecting user {username}".format(username=username))
 
-    def __eq__(self, other):
-        return self.__username == other.__username
+        self.__logger.info("User {username} was disconnected".format(username=username))
 
-    def __msg_on_unauthenticated(self, msg: Message):
-        if isinstance(msg, Connect):
-            try:
-                if msg.version != 1:
-                    self.__handle.write(InvalidVersion(1, 1).encode())
-                else:
-                    self.__server_db.auth_user(msg.username, msg.password)
-                    self.__username = msg.username
-                    self.__rating = self.__server_db.get_rating(self.__username)
-                    self.__server_queue.enqueue_user(self)
-                    self.__handle.write(
-                        QueuePosition(len(self.__server_queue), self.__server_queue.location_of(self) + 1,
-                                      self.rating).encode())
-                    self.current_state = ProtocolState.IN_QUEUE
-            except Database.UserDoesNotExist:
-                self.__handle.write(InvalidLogin(InvalidLogin.Reasons.AccountDoesNotExist).encode())
-            except Database.InvalidPassword:
-                self.__handle.write(InvalidLogin(InvalidLogin.Reasons.InvalidPassword).encode())
-            except DuplicateUser:
-                self.__handle.write(InvalidLogin(InvalidLogin.Reasons.AlreadyLoggedIn).encode())
-        else:
-            print("Invalid message on unauthenticated: {}".format(msg.__class__.__name__))
+    # Public event handlers
+
+    def on_compulsory_move(self, move: Move, board: Board):
+        """
+        Event handle to be called by the Game when it makes a compulsory move
+        STATEFUL this being called is the edge of the DFA from Processing Game State to Processing Game State (Compulsory Move)
+        :param move: Move that was made
+        :param board: New Board state
+        """
+        if self.__current_state != ProtocolState.PROCESSING_GAME_STATE:
+            self.__logger.error(
+                "{user} is Attempting to send compulsory move from state {state}".format(user=self.username,
+                                                                                         state=self.__current_state.name))
             self.disconnect()
-
-    def __msg_on_in_queue(self, msg: Message):
-        if isinstance(msg, LogOut):
-            print("User {} has Logged Out".format(self.__username))
-            try:
-                self.__server_queue.dequeue_user(self)
-            except NotInQueue:
-                pass
-            self.current_state = ProtocolState.UNAUTHENTICATED
-            self.__rating = None
-            self.__username = None
         else:
-            print("Invalid message on in queue: {}".format(msg.__class__.__name__))
+            self.__send(CompulsoryMove(move, board))
+            self.__current_state = ProtocolState.PROCESSING_GAME_STATE
+
+    def on_request_move(self, last_move: Move, board: Board):
+        """
+        Request a move from a user
+        STATEFUL this being called is the edge of the DFA from Processing Game State to User Move (Your Turn)
+        :param last_move: The last move that was made
+        :param board: The current game board
+        """
+        if self.__current_state != ProtocolState.PROCESSING_GAME_STATE:
+            self.__logger.error("{user} is attempting to request move from state {state}".format(user=self.username,
+                                                                                                 state=self.__current_state.name))
             self.disconnect()
-
-    def __msg_on_processing_game_state(self, msg: Message):
-        if isinstance(msg, LogOut):
-            print("User {} logged out".format(self.__username))
-            # User leaves game
-            self.__game.user_disconnect(self)
-            self.current_state = ProtocolState.UNAUTHENTICATED
-            self.__rating = None
-            self.__username = None
         else:
-            print("Invalid message on in queue: {}".format(msg.__class__.__name__))
+            self.__send(YourTurn(last_move, board))
+            self.__current_state = ProtocolState.USER_MOVE
+
+    def on_game_end(self, last_move: Move, board: Board, rating_change: int, winner: bool):
+        """
+        End the game
+        STATEFUL this being called is the edge of the DFA from Processing Game State to Game End (Game Over)
+        :param last_move: The winning move
+        :param board: The board at the end of the game
+        :param rating_change: The user's change in rating
+        :param winner: True if this user was the winner
+        """
+        if self.__current_state != ProtocolState.PROCESSING_GAME_STATE:
+            self.__logger.error("{user} is attempting to end game from state {state}".format(user=self.username,
+                                                                                             state=self.__current_state.name))
             self.disconnect()
-
-    def __msg_on_user_move(self, msg: Message):
-        if isinstance(msg, MakeMove):
-            print("User {} made a move!".format(self.__username))
-            # send a response based on the outcome of the function
-            try:
-                self.current_state = ProtocolState.PROCESSING_GAME_STATE
-                self.__game.apply_move(msg.move, self)
-            except InvalidMoveException:
-                self.current_state = ProtocolState.USER_MOVE
-                self.__handle.write(InvalidMove(msg.move, self.__game.get_board(self)).encode())
-        elif isinstance(msg, LogOut):
-            print("User {} logged out during make move!".format(self.__username))
-            self.__game.user_disconnect(self)
-            self.__game = None
-            self.__username = None
-            self.__rating = None
-            self.current_state = ProtocolState.UNAUTHENTICATED
         else:
-            print("Invalid message on on user move: {}".format(msg.__class__.__name__))
-            self.disconnect()
-
-    def __msg_on_game_end(self, msg: Message):
-        if isinstance(msg, ReQueue):
-            print("User {} reentered the queue".format(self.__username))
-            self.__server_queue.enqueue_user(self)
-            self.current_state = ProtocolState.IN_QUEUE
-            self.__handle.write(
-                QueuePosition(len(self.__server_queue), self.__server_queue.location_of(self), self.rating).encode())
-        elif isinstance(msg, LogOut):
-            self.__username = None
-            self.__rating = None
-            self.__game = None
-            self.current_state = ProtocolState.UNAUTHENTICATED
-        else:
-            print("Invalid message on game end: {}".format(msg.__class__.__name__))
-            self.disconnect()
-
-    def on_data(self, client: TCP, data, error):
-        # Get parse the message
-        if error is not None:
-            # End of file
-            if error == -4095:
-                self.disconnect()
-            else:
-                print("Unknown error: {}, {}".format(errno.strerror(error), error))
-        else:
-            msg = message_to_type(data).parse_and_decode(data)
-            print("got: {} from {}".format(msg, self.__username))
-            {
-                ProtocolState.UNAUTHENTICATED: self.__msg_on_unauthenticated,
-                ProtocolState.IN_QUEUE: self.__msg_on_in_queue,
-                ProtocolState.PROCESSING_GAME_STATE: self.__msg_on_processing_game_state,
-                ProtocolState.USER_MOVE: self.__msg_on_user_move,
-                ProtocolState.GAME_END: self.__msg_on_game_end
-            }[self.current_state](msg)
-
-    def on_compulsory_move(self, move, board):
-        self.__handle.write(CompulsoryMove(move, board).encode())
-        self.current_state = ProtocolState.PROCESSING_GAME_STATE
-
-    def request_move(self, last_move, board):
-        self.__handle.write(YourTurn(last_move, board).encode())
-        self.current_state = ProtocolState.USER_MOVE
-
-    def on_game_end(self, last_move, board, rating_change, winner):
-        self.__handle.write(
-            GameOver(winner, self.__rating + rating_change, self.__rating, last_move, board).encode())
-        self.__server_db.set_rating(self.__username, self.__rating + rating_change)
-        self.__rating = self.__rating + rating_change
-        self.current_state = ProtocolState.GAME_END
+            self.__send(GameOver(winner, self.__rating + rating_change, self.__rating, last_move, board))
+            self.__server_db.set_rating(self.__username, self.__rating + rating_change)
+            self.__rating = self.__rating + rating_change
+            self.__current_state = ProtocolState.GAME_END
 
     def on_opponent_disconnect(self):
-        print("My opponent disconnected")
-        self.__handle.write(OpponentDisconnect().encode())
-        self.current_state = ProtocolState.GAME_END
+        """
+        Called when an opponent disconnects from a game
+        STATEFUL this being called is the edge of the DFA from Processing Game State or User Move to Game End (Opponent Disconnect)
+        """
+        if self.__current_state not in [ProtocolState.PROCESSING_GAME_STATE, ProtocolState.USER_MOVE]:
+            self.__logger.error("{user} had opponent disconnect while in state {state}".format(user=self.username,
+                                                                                               state=self.__current_state.name))
+            self.disconnect()
+        else:
+            self.__send(OpponentDisconnect())
+            self.__current_state = ProtocolState.GAME_END
 
-    def on_queue_position(self, queue_size, queue_position):
-        self.__handle.write(QueuePosition(queue_size, queue_position, self.rating).encode())
+    def on_queue_position(self, queue_size: int, queue_position: int):
+        """
+        Called when the queue updates and the user is given their position again
+        STATEFUL this being called is the edge of the DFA from In Queue to In Queue (Queue Position)
+        :param queue_size: The length of the queue
+        :param queue_position: The user's position in the queue
+        """
+        if self.__current_state != ProtocolState.IN_QUEUE:
+            self.__logger.error("{user} got Queue Update while in state {state}".format(user=self.username,
+                                                                                        state=self.__current_state.name))
+            self.disconnect()
+        else:
+            self.__send(QueuePosition(queue_size, queue_position, self.rating))
 
-    def on_game_start(self, opponent_name, opponent_rating):
-        self.__handle.write(GameStart(opponent_name, opponent_rating).encode())
-        self.current_state = ProtocolState.PROCESSING_GAME_STATE
-
-    def join_game(self, game):
+    def on_game_start(self, opponent_name: bytes, opponent_rating: int, game: Game):
+        """
+        Called when a match is made and the user is added to a game
+        STATEFUL this being called is the edge of the DFA from In Queue to Processing Game State (Game Start)
+        :param opponent_name: The name of the user's opponent
+        :param opponent_rating: The rating of the opponent
+        :param game: The game to join
+        """
         self.__game = game
+        if self.__current_state != ProtocolState.IN_QUEUE:
+            self.__logger.error("{user} got placed in game while in state {state}".format(user=self.username,
+                                                                                          state=self.__current_state.name))
+            self.disconnect()
+        else:
+            self.__send(GameStart(opponent_name, opponent_rating))
+            self.__current_state = ProtocolState.PROCESSING_GAME_STATE
 
+    # Public Properties
     @property
     def username(self):
         return self.__username
@@ -181,3 +181,191 @@ class Session:
     @property
     def rating(self):
         return self.__rating
+
+    # Private Methods
+
+    def __send(self, msg: Message) -> None:
+        """
+        Encode and Send a message to the client
+        :param msg: Message to send
+        """
+        self.__logger.debug("Sending {msg}, encoded as {raw}, from session {user}".format(msg=msg, raw=msg.encode(),
+                                                                                          user=self.username))
+        self.__handle.write(msg.encode())
+
+    # Private Event Handles
+
+    def __on_data(self, client: TCP, data: bytes, error: Optional[int]):
+        """
+        Called when the session receives data
+        :param client: The TCP socket that data was received on
+        :param data: Raw buffer of received data
+        :param error: Where an error would be
+        """
+        if error is not None:
+            # End of file
+            if error == -4095:
+                self.disconnect()
+            else:
+                self.__logger.warning(
+                    "Got unknown error {strerror} {errno} while reading from client {username}".format(
+                        strerror=errno.strerror(error), errno=error, username=self.username))
+                self.disconnect()
+        else:
+            try:
+                msg = message_to_type(data).parse_and_decode(data)
+            except NotEnoughData:
+                self.__logger.critical("Got invalid message ({raw}) from session {user}, shutting down".format(raw=data,
+                                                                                                               user=self.username))
+                self.disconnect()
+            else:
+                # Call the correct callback based on current protocol state
+                {
+                    ProtocolState.UNAUTHENTICATED: self.__msg_on_unauthenticated,
+                    ProtocolState.IN_QUEUE: self.__msg_on_in_queue,
+                    ProtocolState.PROCESSING_GAME_STATE: self.__msg_on_processing_game_state,
+                    ProtocolState.USER_MOVE: self.__msg_on_user_move,
+                    ProtocolState.GAME_END: self.__msg_on_game_end
+                }[self.__current_state](msg)
+                # If there is more data, keep parsing
+                if len(data) > msg.calc_size() + 1:
+                    self.__on_data(client, data[msg.calc_size():], None)
+
+    # State based event handlers
+    # These functions implement the Server side of the DFA
+    # All of the following functions are STATEFUL
+
+    def __msg_on_unauthenticated(self, msg: Message):
+        """
+        Logic to do while in Unauthenticated State
+        :param msg: Message received
+        """
+        if isinstance(msg, Connect):
+            # This is the edge of the DFA from Unauthenticated to In Queue (Connect)
+            try:
+                if msg.version not in self.supported_versions:
+                    self.__send(InvalidVersion(min(self.supported_versions), max(self.supported_versions)))
+                else:
+                    # Authorize the user
+                    self.__server_db.auth_user(msg.username, msg.password)
+                    self.__username = msg.username
+                    self.__rating = self.__server_db.get_rating(self.__username)
+                    # Add the user to the queue
+                    self.__server_queue.enqueue_user(self)
+                    self.__send(
+                        QueuePosition(len(self.__server_queue), self.__server_queue.location_of(self) + 1, self.rating))
+                    self.__current_state = ProtocolState.IN_QUEUE
+            except Database.UserDoesNotExist:
+                # If the user does not exist, ask the client to log in again (DFA Edge from In Queue to Unauthenticated (Invalid Login))
+                self.__logger.info("{user} attempted to log in but is not registered".format(user=msg.username))
+                self.__send(InvalidLogin(InvalidLogin.Reasons.AccountDoesNotExist))
+            except Database.InvalidPassword:
+                # If the user got their password wrong, ask them to send it again (DFA Edge from In Queue to Unauthenticated (Invalid Login))
+                self.__logger.info("{user} attempted to log in but got their password wrong".format(user=msg.username))
+                self.__send(InvalidLogin(InvalidLogin.Reasons.InvalidPassword))
+            except DuplicateUser:
+                # If the user is already logged in, tell them (DFA Edge from In Queue to Unauthenticated (Invalid Login))
+                self.__logger.info("{user} attempted to log in but already is logged in".format(user=msg.username))
+                self.__send(InvalidLogin(InvalidLogin.Reasons.AlreadyLoggedIn))
+        else:
+            self.__logger.warning(
+                "Received invalid message of type {type} for state {state}".format(type=msg.__class__.__name__,
+                                                                                   state=self.__current_state.name))
+            self.disconnect()
+
+    def __msg_on_in_queue(self, msg: Message):
+        """
+        Logic to do while in the In Queue State
+        :param msg: Message received
+        """
+        if isinstance(msg, LogOut):
+            # This is the edge of the DFA from In Queue to Unauthenticated (Log Out)
+            self.__logger.info("{user} logged out".format(user=self.username))
+            try:
+                self.__server_queue.dequeue_user(self)
+            except NotInQueue:
+                pass
+            self.__current_state = ProtocolState.UNAUTHENTICATED
+            self.__rating = None
+            self.__username = None
+        else:
+            self.__logger.warning(
+                "Received invalid message of type {type} for state {state}".format(type=msg.__class__.__name__,
+                                                                                   state=self.__current_state.name))
+            self.disconnect()
+
+    def __msg_on_processing_game_state(self, msg: Message):
+        """
+        Logic to do while in Processing Game State state
+        :param msg: Message received
+        """
+        if isinstance(msg, LogOut):
+            # This is the edge of the DFA from Processing Game State to Unauthenticated (Log Out)
+            self.__logger.info("{user} logged out".format(user=self.username))
+            # User leaves game
+            self.__game.user_disconnect(self)
+            self.__current_state = ProtocolState.UNAUTHENTICATED
+            self.__rating = None
+            self.__username = None
+        else:
+            self.__logger.warning(
+                "Received invalid message of type {type} for state {state}".format(type=msg.__class__.__name__,
+                                                                                   state=self.__current_state.name))
+            self.disconnect()
+
+    def __msg_on_user_move(self, msg: Message):
+        """
+        Logic to do while in User Move state
+        :param msg: Message received
+        """
+        if isinstance(msg, MakeMove):
+            # This is the edge of the DFA from User Move to Processing Game State (Make Move)
+            try:
+                self.__current_state = ProtocolState.PROCESSING_GAME_STATE
+                self.__game.apply_move(msg.move, self)
+                self.__logger.info("{} made move {}".format(self.username, msg.move.__repr__()))
+            except InvalidMoveException:
+                self.__current_state = ProtocolState.USER_MOVE
+                self.__send(InvalidMove(msg.move, self.__game.get_board(self)))
+        elif isinstance(msg, LogOut):
+            # This is the edge of the DFA from User Move to Unauthenticated (Log Out)
+            self.__logger.info("{user} logged out".format(user=self.username))
+            self.__game.user_disconnect(self)
+            self.__game = None
+            self.__username = None
+            self.__rating = None
+            self.__current_state = ProtocolState.UNAUTHENTICATED
+        else:
+            self.__logger.warning(
+                "Received invalid message of type {type} for state {state}".format(type=msg.__class__.__name__,
+                                                                                   state=self.__current_state.name))
+            self.disconnect()
+
+    def __msg_on_game_end(self, msg: Message):
+        """
+        Logic to do while in Game End state
+        :param msg: Message received
+        """
+        if isinstance(msg, ReQueue):
+            # This is the edge of the DFA from Game End to In Queue (ReQueue)
+            self.__logger.info("{} has rejoined the queue".format(self.username))
+            self.__server_queue.enqueue_user(self)
+            self.__current_state = ProtocolState.IN_QUEUE
+            self.__send(QueuePosition(len(self.__server_queue), self.__server_queue.location_of(self), self.rating))
+        elif isinstance(msg, LogOut):
+            # This is the edge of the DFA from Game End to Unauthenticated (Log Out)
+            self.__logger.info("{user} logged out".format(user=self.username))
+            self.__username = None
+            self.__rating = None
+            self.__game = None
+            self.__current_state = ProtocolState.UNAUTHENTICATED
+        else:
+            self.__logger.warning(
+                "Received invalid message of type {type} for state {state}".format(type=msg.__class__.__name__,
+                                                                                   state=self.__current_state.name))
+            self.disconnect()
+
+    # Operators
+
+    def __eq__(self, other: "Session") -> bool:
+        return self.__username == other.__username
