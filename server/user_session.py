@@ -368,7 +368,7 @@ class Session:
                 self.__logger.warning(
                     "Received invalid MakeMove message from {user} for state {state}".format(user=self.username,
                                                                                              state=self.__current_state.name))
-        if isinstance(msg, ReQueue):
+        elif isinstance(msg, ReQueue):
             # This is the edge of the DFA from Game End to In Queue (ReQueue)
             self.__logger.info("{user} has rejoined the queue".format(user=self.username))
             self.__server_queue.enqueue_user(self)
