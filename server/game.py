@@ -11,6 +11,10 @@ class InvalidMoveException(Exception):
     """ Invalid Move """
 
 
+class InvalidGameException(Exception):
+    """ Raised when the game is in an invalid state """
+
+
 class Game:
     """ Game represents a Checkers game between two players """
 
@@ -21,6 +25,9 @@ class Game:
         :param player_one: The first player in the game
         :param player_two: The second player in the game
         """
+        if player_one.username == player_two.username:
+            logger.warning("Attempting to start game between two of {user}".format(user=player_one.username))
+            raise InvalidGameException()
         if player_one.rating < player_two.rating:
             self.__player_one = player_one
             self.__player_two = player_two

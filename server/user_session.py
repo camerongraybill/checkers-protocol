@@ -62,8 +62,9 @@ class Session:
                 self.__server_queue.dequeue_user(self)
             # Cleanly close the user's game
             if self.__game is not None:
-                self.__game.user_disconnect(self)
+                game = self.__game
                 self.__game = None
+                game.user_disconnect(self)
             # Reset all session variables to defaults
             self.__rating = None
             self.__username = None

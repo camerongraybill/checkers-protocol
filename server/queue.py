@@ -5,7 +5,7 @@ from typing import List, Tuple
 
 from pyuv import Loop, Timer
 
-from .game import Game
+from .game import Game, InvalidGameException
 
 
 class DuplicateUser(RuntimeError):
@@ -31,6 +31,7 @@ class UserQueue:
         self.__users: List["Session"] = []
         self.__logger = logger
         self.__matchmaking_handler: Timer = None
+        self.__games: List[Game] = []
 
     def enqueue_user(self, user_to_add: "Session"):
         """
@@ -64,7 +65,7 @@ class UserQueue:
         smallest_diff = 100000000
         for user in self.__users:
             for inner_user in self.__users:
-                if user == inner_user:
+                if user.username == inner_user.username:
                     continue
                 if abs(user.rating - inner_user.rating) < smallest_diff:
                     best_user_pair = (user, inner_user)
@@ -110,7 +111,14 @@ class UserQueue:
         try:
             user_one, user_two = self.pop_closest_pair()
             # Make a game
-            Game(user_one, user_two, self.__logger)
+            try:
+                self.__games.append(Game(user_one, user_two, self.__logger))
+            except InvalidGameException:
+                self.__logger.warning(
+                    "Failed to start game between {pone} and {ptwo}, putting both back in queue".format(
+                        pone=user_one.username, ptwo=user_two.username))
+                self.enqueue_user(user_one)
+                self.enqueue_user(user_two)
             self.__logger.info("Starting game between {} and {}".format(user_one.username, user_two.username))
         except QueueTooSmall:
             pass
