@@ -373,7 +373,7 @@ class Session:
             self.__logger.info("{user} has rejoined the queue".format(user=self.username))
             self.__server_queue.enqueue_user(self)
             self.__current_state = ProtocolState.IN_QUEUE
-            self.__send(QueuePosition(len(self.__server_queue), self.__server_queue.location_of(self), self.rating))
+            self.__send(QueuePosition(len(self.__server_queue), self.__server_queue.location_of(self) + 1, self.rating))
         elif isinstance(msg, LogOut):
             # This is the edge of the DFA from Game End to Unauthenticated (Log Out)
             self.__logger.info("{user} logged out".format(user=self.username))
