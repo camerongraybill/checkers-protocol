@@ -53,6 +53,7 @@ class Server:
         Start the Server on the loop
         :param loop: Loop to bind the server to
         """
+        self.__logger.info("Listening on {ip}:{port} for new connections".format(ip=self.__ip, port=self.__port))
         self.__handle = TCP(loop)
         # Listen on the provided ip and port
         self.__handle.bind((self.__ip, self.__port))
@@ -63,6 +64,7 @@ class Server:
         """
         Must close all clients when disconnecting
         """
+        self.__logger.info("Stopped accepting new connections, closing all connections")
         [c.disconnect(force=True) for c in self.__connections]
         if self.__handle:
             self.__handle.close()

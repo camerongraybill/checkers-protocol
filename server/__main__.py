@@ -4,7 +4,7 @@ If the package was installed correctly with pip or setuptools, then this file wi
 Otherwise, it can be executed (from the root directory) with `python -m server`
 """
 from argparse import ArgumentParser, ArgumentError, Namespace
-from logging import getLogger, DEBUG, WARNING, basicConfig
+from logging import getLogger, DEBUG, INFO, basicConfig
 from signal import SIGINT
 from socket import inet_aton, error as socket_error
 from sys import exit as s_exit
@@ -59,7 +59,7 @@ def start():
     """
     Start the server application by parsing the args
     """
-    basicConfig(format='%(levelname)s(%(asctime)s):%(message)s', level=DEBUG)
+    basicConfig(format='%(levelname)s [%(asctime)s]: %(message)s', level=DEBUG)
     logger = getLogger()
     loop = Loop()
     try:
@@ -68,7 +68,7 @@ def start():
 
         # Set the log level if not in verbose mode
         if not args.verbose:
-            logger.setLevel(WARNING)
+            logger.setLevel(INFO)
 
         # Allocate a database and register some test users
         db = DictionaryDB(logger)

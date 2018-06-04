@@ -76,7 +76,7 @@ def start():
     """
     Start the client application by allocating a logger, parsing args and then forwarding the args on to the client
     """
-    basicConfig(format='%(levelname)s(%(asctime)s):%(message)s', level=DEBUG)
+    basicConfig(format='%(levelname)s [%(asctime)s]: %(message)s', level=DEBUG)
     logger = getLogger()
     try:
         try:
