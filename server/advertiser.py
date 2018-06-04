@@ -9,7 +9,7 @@ from pyuv import Loop, UDP, Timer
 class Advertiser:
     """ The Advertiser is used for SERVICE DISCOVERY to advertise the address of a checkers server """
 
-    def __init__(self, server_ip: str, broadcast_ip: str, broadcast_port: int, logger: Logger):
+    def __init__(self, server_ip: str, broadcast_ip: str, broadcast_port: int, listen_port: int, logger: Logger):
         """
         :param server_ip: IP to bind the UDP server to
         :param broadcast_ip: IP to broadcast messages to
@@ -18,6 +18,7 @@ class Advertiser:
         self.__ip = server_ip
         self.__port = broadcast_port
         self.__broadcast_ip = broadcast_ip
+        self.__listen_port = listen_port
         self.__advertiser: UDP = None
         self.__advertising_timer: Timer = None
         self.__logger = logger
@@ -27,10 +28,10 @@ class Advertiser:
         Add the UDP socket and a Timer to the event loop which
         :param loop: The Event Loop to bind the objects to
         """
-        self.__logger.info("Registering Advertiser on {ip}:{port}".format(ip=self.__ip, port=self.__port))
+        self.__logger.info("Registering Advertiser on {ip}:{port}".format(ip=self.__ip, port=self.__listen_port))
         self.__advertiser = UDP(loop)
         # Bind to the same IP and Port as the TCP server
-        self.__advertiser.bind((self.__ip, self.__port))
+        self.__advertiser.bind((self.__ip, self.__listen_port))
         # Enable Broadcast
         self.__advertiser.set_broadcast(True)
 

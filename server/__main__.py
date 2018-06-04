@@ -92,7 +92,7 @@ def start():
         s = Server(args.listen_ip, 8864, create_session, logger)
 
         # Allocate an advertiser
-        a = Advertiser(args.listen_ip, args.broadcast_ip, 8864, logger)
+        a = Advertiser(args.listen_ip, args.broadcast_ip, 8864, 8865, logger)
 
         # Allocate a Signal Handler
         sig = Signal(loop)
