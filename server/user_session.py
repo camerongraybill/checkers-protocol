@@ -215,8 +215,10 @@ class Session:
         else:
             try:
                 msg = message_to_type(data).parse_and_decode(data)
-                self.__logger.debug("Received {message} from user {user}".format(message=msg,
-                                                                                 user=self.username or "(who is not logged in)"))
+                self.__logger.debug(
+                    "Received {message} from user {user} with session in state {state}".format(message=msg,
+                                                                                               user=self.username or "(who is not logged in)",
+                                                                                               state=self.__current_state.name))
             except NotEnoughData:
                 self.__logger.critical("Got invalid message ({raw}) from session {user}, shutting down".format(raw=data,
                                                                                                                user=self.username))
