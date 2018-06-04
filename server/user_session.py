@@ -55,7 +55,7 @@ class Session:
         Disconnect the user from the server
         :param force: If true, do not cleanly shut down and clear the state of the socket
         """
-        username = self.username
+        username = self.username or "(that was not logged in)"
         if not force:
             # Remove the user from the queue
             if self in self.__server_queue:

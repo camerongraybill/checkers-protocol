@@ -144,6 +144,7 @@ class Game:
         :param last_move:
         """
         loser = self.__get_opponent(winner)
+        self.__logger.info("{winner} beat {loser}".format(winner=winner.username, loser=loser.username))
         winner.on_game_end(last_move, self.get_board(winner), 10, True)
         loser.on_game_end(last_move, self.get_board(loser), -10, False)
 
