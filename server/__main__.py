@@ -45,14 +45,33 @@ def get_args() -> Namespace:
         except socket_error:
             raise ArgumentError(None, "Invalid IP Address: {}".format(ip))
 
-    parser = ArgumentParser()
-    parser.add_argument("--broadcast-ip", type=validate_ip_arg, required=True,
-                        help="The Broadcast address to send Service Discovery messages to")
-    parser.add_argument("--listen-ip", type=validate_ip_arg, required=True,
-                        help="The IP Address to listen for new connections on")
-    parser.add_argument("--verbose", action="store_true", default=False, help="Enable Debug Logging")
-    parser.add_argument("--quiet", action="store_true", default=False, help="Only log warning and above")
+    def valid_port(port: str) -> int:
+        """
+        Validate that a port is valid
+        Raises ArgumentError if it is not a valid port
+        :param port: port to validate
+        :return: the port if it is valid
+        """
+        try:
+            port = int(port)
+        except TypeError:
+            raise ArgumentError(None, "Invalid Port: {}".format(port))
+        else:
+            if not 0 <= port <= 25565:
+                raise ArgumentError(None, "Invalid Port Number: {}".format(port))
+            return port
 
+    parser = ArgumentParser()
+    parser.add_argument("--broadcast-ip", type=validate_ip_arg, default="255.255.255.255",
+                        help="The Broadcast address to send Service Discovery messages to (default: %(default)s)")
+    parser.add_argument("--listen-ip", type=validate_ip_arg, default="0.0.0.0",
+                        help="The IP Address to listen for new connections on (default: %(default)s)")
+    parser.add_argument("--verbose", action="store_true", default=False, help="Enable Debug Logging")
+    parser.add_argument("--listen-port", type=valid_port, default="8864",
+                        help="Port to listen on for incoming connections (default: %(default)s)")
+    parser.add_argument("--quiet", action="store_true", default=False, help="Only log warning and above")
+    parser.add_argument("--udp-port", type=valid_port, default="0",
+                        help="Port to bind UDP Advertiser to (default: %(default)s)")
     args = parser.parse_args()
     if args.verbose and args.quiet:
         raise ArgumentError(None, "Cannot have verbose AND quiet logging, please only pick --verbose or --quiet")
@@ -81,6 +100,7 @@ def start():
         db.register_user(b"cam", b"mac", 1200)
         db.register_user(b"jen", b"nej", 1201)
         db.register_user(b"kain", b"niak", 1200)
+        db.register_user(b"andrei", b"ierdna", 1199)
 
         # Allocate a Queue
         queue = UserQueue(logger)
@@ -95,10 +115,10 @@ def start():
             return Session(socket, queue, db, logger)
 
         # Allocate a Server
-        s = Server(args.listen_ip, 8864, create_session, logger)
+        s = Server(args.listen_ip, args.listen_port, create_session, logger)
 
         # Allocate an advertiser
-        a = Advertiser(args.listen_ip, args.broadcast_ip, 8864, 8865, logger)
+        a = Advertiser(args.listen_ip, args.broadcast_ip, args.listen_port, args.udp_port, logger)
 
         # Allocate a Signal Handler
         sig = Signal(loop)

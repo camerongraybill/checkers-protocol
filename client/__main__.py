@@ -57,6 +57,22 @@ def get_args() -> Namespace:
         except socket_error:
             raise ArgumentError(None, "Invalid IP Address: {}".format(ip))
 
+    def valid_port(port: str) -> int:
+        """
+        Validate that a port is valid
+        Raises ArgumentError if it is not a valid port
+        :param port: port to validate
+        :return: the port if it is valid
+        """
+        try:
+            port = int(port)
+        except TypeError:
+            raise ArgumentError(None, "Invalid Port: {}".format(port))
+        else:
+            if not 0 <= port <= 25565:
+                raise ArgumentError(None, "Invalid Port Number: {}".format(port))
+            return port
+
     parser = ArgumentParser()
     try:
         parser.add_argument("--server-ip", type=validate_ip_arg, default=listen_for_address(),
@@ -66,7 +82,8 @@ def get_args() -> Namespace:
                             help="The ipv4 address for the server (Failed to find with service discovery)")
     parser.add_argument("--username", type=str.encode, help="The Username to connect with")
     parser.add_argument("--password", type=str.encode, help="The Password to connect with")
-    parser.add_argument("--port", type=int, help="The Port the server is running on", default=8864)
+    parser.add_argument("--port", type=valid_port, help="The Port the server is running on (default: %(default)s)",
+                        default="8864")
     parser.add_argument("--verbose", action="store_true", default=False, help="Enable Logging")
 
     return parser.parse_args()
@@ -93,7 +110,7 @@ def start():
                 args.password = ui.request_pass()
 
             # Create a client
-            s = Client(args.server_ip, 8864, args.username, args.password, ui, logger)
+            s = Client(args.server_ip, args.port, args.username, args.password, ui, logger)
 
             # Create an event loop
             loop = Loop()
