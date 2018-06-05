@@ -7,6 +7,7 @@ from enum import IntEnum
 
 
 class ProtocolState(IntEnum):
+    """ Represents the states of the protocol """
     # Unauthenticated
     UNAUTHENTICATED = 1
     # In Queue

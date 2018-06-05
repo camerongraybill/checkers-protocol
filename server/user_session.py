@@ -159,7 +159,7 @@ class Session:
         else:
             self.__send(QueuePosition(queue_size, queue_position, self.rating))
 
-    def on_game_start(self, opponent_name: bytes, opponent_rating: int, game: "Game"):
+    def on_game_start(self, opponent_name: str, opponent_rating: int, game: "Game"):
         """
         Called when a match is made and the user is added to a game
         STATEFUL this being called is the edge of the DFA from In Queue to Processing Game State (Game Start)
@@ -173,13 +173,13 @@ class Session:
                                                                                           state=self.__current_state.name))
             self.disconnect()
         else:
-            self.__send(GameStart(opponent_name, opponent_rating))
+            self.__send(GameStart(opponent_name.encode(), opponent_rating))
             self.__current_state = ProtocolState.PROCESSING_GAME_STATE
 
     # Public Properties
     @property
-    def username(self):
-        return self.__username
+    def username(self) -> str:
+        return self.__username.decode()
 
     @property
     def rating(self):
