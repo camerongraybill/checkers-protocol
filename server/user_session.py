@@ -45,6 +45,7 @@ class Session:
         self.__timeout_timer: Timer = Timer(handle.loop)
         self.__in_timeout = False
         self.__timeout_duration = 1
+        self.active = False
 
     # Public Methods
 
@@ -54,10 +55,7 @@ class Session:
         """
         self.__logger.info("Started New Session")
         self.__handle.start_read(self.__on_data)
-
-    @property
-    def active(self):
-        return self.__handle.active
+        self.active = True
 
     def disconnect(self, force=False):
         """
@@ -88,7 +86,7 @@ class Session:
         except Exception:
             # No matter what exception happens here, we don't care. Just close the connection.
             self.__logger.warning("Problem while disconnecting user {username}".format(username=username))
-
+        self.active = False
         self.__logger.info("User {username} was disconnected".format(username=username))
 
     # Public event handlers
