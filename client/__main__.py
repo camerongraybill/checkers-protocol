@@ -114,7 +114,7 @@ def start():
                 args.password = ui.request_pass()
 
             # Create a client
-            s = Client(args.server_ip, args.port, args.username, args.password, ui, logger)
+            s = Client(args.server_addr, args.port, args.username, args.password, ui, logger)
 
             # Create an event loop
             loop = Loop()

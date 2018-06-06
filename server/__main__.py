@@ -66,9 +66,9 @@ def get_args() -> Namespace:
             return port
 
     parser = ArgumentParser()
-    parser.add_argument("--broadcast-ip", default="255.255.255.255", type=validate_ip_arg,
+    parser.add_argument("--broadcast-addr", default="255.255.255.255", type=validate_ip_arg,
                         help="The Broadcast address or hostname to send Service Discovery messages to (default: %(default)s)")
-    parser.add_argument("--listen-ip", default="0.0.0.0", type=validate_ip_arg,
+    parser.add_argument("--listen-addr", default="0.0.0.0", type=validate_ip_arg,
                         help="The IP Address or Hostname to listen for new connections on (default: %(default)s)")
     parser.add_argument("--verbose", action="store_true", default=False, help="Enable Debug Logging")
     parser.add_argument("--listen-port", type=valid_port, default="8864",
@@ -119,10 +119,10 @@ def start():
             return Session(socket, queue, db, logger)
 
         # Allocate a Server
-        s = Server(args.listen_ip, args.listen_port, create_session, logger)
+        s = Server(args.listen_addr, args.listen_port, create_session, logger)
 
         # Allocate an advertiser
-        a = Advertiser(args.listen_ip, args.broadcast_ip, args.listen_port, args.udp_port, logger)
+        a = Advertiser(args.listen_addr, args.broadcast_addr, args.listen_port, args.udp_port, logger)
 
         # Allocate a Signal Handler
         sig = Signal(loop)
