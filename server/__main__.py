@@ -6,6 +6,7 @@ Otherwise, it can be executed (from the root directory) with `python -m server`
 from argparse import ArgumentParser, ArgumentError, Namespace
 from logging import getLogger, DEBUG, INFO, WARNING, basicConfig
 from signal import SIGINT
+from socket import inet_aton, error as socket_error, gethostbyname
 from sys import exit as s_exit
 # Validate that the python version is at least 3.6
 from sys import version_info
@@ -23,6 +24,23 @@ if version_info <= (3, 6,):
 
     stderr.write("Invalid Python version, needs 3.6 or above")
     s_exit(1)
+
+
+def validate_ip_arg(ip_or_hostname: str) -> str:
+    """
+    Validate that an IP address or hostname is valid
+    Raise ArgumentError if the address is invalid
+    :param ip_or_hostname: ip address or hostname
+    :return: The same IP address
+    """
+    try:
+        inet_aton(ip_or_hostname)
+        return ip_or_hostname
+    except socket_error:
+        try:
+            return gethostbyname(ip_or_hostname)
+        except socket_error:
+            raise ArgumentError(None, "Invalid IP Address or hostname: {}".format(ip_or_hostname))
 
 
 def get_args() -> Namespace:
@@ -48,9 +66,9 @@ def get_args() -> Namespace:
             return port
 
     parser = ArgumentParser()
-    parser.add_argument("--broadcast-ip", default="255.255.255.255",
+    parser.add_argument("--broadcast-ip", default="255.255.255.255", type=validate_ip_arg,
                         help="The Broadcast address to send Service Discovery messages to (default: %(default)s)")
-    parser.add_argument("--listen-ip", default="0.0.0.0",
+    parser.add_argument("--listen-ip", default="0.0.0.0", type=validate_ip_arg,
                         help="The IP Address to listen for new connections on (default: %(default)s)")
     parser.add_argument("--verbose", action="store_true", default=False, help="Enable Debug Logging")
     parser.add_argument("--listen-port", type=valid_port, default="8864",

@@ -6,7 +6,7 @@ Otherwise, it can be executed (from the root directory) with `python -m client`
 
 from argparse import ArgumentParser, ArgumentError, Namespace
 from logging import getLogger, DEBUG, CRITICAL, basicConfig
-from socket import socket, AF_INET, SOCK_DGRAM, timeout
+from socket import socket, AF_INET, SOCK_DGRAM, timeout, inet_aton, error as socket_error, gethostbyname
 from sys import exit as s_exit
 # Validate that the python version is at least 3.6
 from sys import version_info
@@ -21,6 +21,23 @@ if version_info <= (3, 6,):
 
     stderr.write("Invalid Python version, needs 3.6 or above")
     s_exit(1)
+
+
+def validate_ip_arg(ip_or_hostname: str) -> str:
+    """
+    Validate that an IP address or hostname is valid
+    Raise ArgumentError if the address is invalid
+    :param ip_or_hostname: ip address or hostname
+    :return: The same IP address
+    """
+    try:
+        inet_aton(ip_or_hostname)
+        return ip_or_hostname
+    except socket_error:
+        try:
+            return gethostbyname(ip_or_hostname)
+        except socket_error:
+            raise ArgumentError(None, "Invalid IP Address or hostname: {}".format(ip_or_hostname))
 
 
 def listen_for_address() -> str:
@@ -62,11 +79,11 @@ def get_args() -> Namespace:
 
     parser = ArgumentParser()
     try:
-        parser.add_argument("--server-ip", default=listen_for_address(),
-                            help="The ip address for the server (%(default)s found by service discovery)")
+        parser.add_argument("--server-addr", default=listen_for_address(), type=validate_ip_arg,
+                            help="The hostname or ip address for the server (%(default)s found by service discovery)")
     except timeout:
-        parser.add_argument("--server-ip", required=True,
-                            help="The ip address for the server (Failed to find with service discovery)")
+        parser.add_argument("--server-addr", required=True, type=validate_ip_arg,
+                            help="The hostname or ip address for the server (Failed to find with service discovery)")
     parser.add_argument("--username", type=str.encode, help="The Username to connect with")
     parser.add_argument("--password", type=str.encode, help="The Password to connect with")
     parser.add_argument("--port", type=valid_port, help="The Port the server is running on (default: %(default)s)",
