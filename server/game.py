@@ -36,6 +36,7 @@ class Game:
             self.__player_two = player_one
         self.__logger = logger
         self.__board = Board.generate_game_start()
+        self.game_active = True
         player_one.on_game_start(player_two.username, player_two.rating, self)
         player_two.on_game_start(player_one.username, player_one.rating, self)
 
@@ -48,6 +49,7 @@ class Game:
         Called when the game is ended for reasons other than a player winning or a user disconnecting
         Will disconnect the users
         """
+        self.game_active = False
         self.__logger.info(
             "Force closing game between {userone} and {usertwo}".format(userone=self.__player_one.username,
                                                                         usertwo=self.__player_two.username))
@@ -59,6 +61,7 @@ class Game:
         Called when a user disconnects
         :param user: The user that disconnected
         """
+        self.game_active = False
         self.__logger.info("{user} disconnected from their game".format(user=user.username))
         self.__get_opponent(user).on_opponent_disconnect()
 
@@ -161,6 +164,7 @@ class Game:
         :param winner:
         :param last_move:
         """
+        self.game_active = False
         loser = self.__get_opponent(winner)
         self.__logger.info("{winner} beat {loser}".format(winner=winner.username, loser=loser.username))
         winner.on_game_end(last_move, self.get_board(winner), 10, True)

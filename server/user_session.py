@@ -55,6 +55,10 @@ class Session:
         self.__logger.info("Started New Session")
         self.__handle.start_read(self.__on_data)
 
+    @property
+    def active(self):
+        return self.__handle.active
+
     def disconnect(self, force=False):
         """
         Disconnect the user from the server

@@ -144,7 +144,7 @@ def start():
         sig.start(on_signal, SIGINT)
         s.start(loop)
         a.start(loop)
-        queue.register_matchmaker(loop)
+        queue.register_loop(loop)
 
         # Run the event Loop
         loop.run()

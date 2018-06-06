@@ -31,6 +31,7 @@ class UserQueue:
         self.__users: List["Session"] = []
         self.__logger = logger
         self.__matchmaking_handler: Timer = None
+        self.__pruner_handler: Timer = None
         self.__games: List[Game] = []
 
     def enqueue_user(self, user_to_add: "Session"):
@@ -94,14 +95,18 @@ class UserQueue:
         else:
             raise NotInQueue()
 
-    def register_matchmaker(self, loop: Loop):
+    def register_loop(self, loop: Loop):
         """
-        Register the event loop and the matchmaking timer
+        Register the matchmaker and the pruner to the loop
         :param loop: The loop to bind to
         """
         self.__logger.info("Registering matchmaker")
         self.__matchmaking_handler = Timer(loop)
         self.__matchmaking_handler.start(self.__make_match, 0, 5)
+
+        self.__logger.info("Registering Pruner")
+        self.__pruner_handler = Timer(loop)
+        self.__pruner_handler.start(self.__prune, 0, 1)
 
     def __make_match(self, timer_handle: Timer):
         """
@@ -125,6 +130,17 @@ class UserQueue:
         for user in self:
             user.on_queue_position(len(self), self.location_of(user) + 1)
 
+    def __prune(self, timer_handle: Timer):
+        """
+        Check for inactive games and sessions, and remove them from internal state
+        """
+        sessions_to_prune = [x for x in self.__users if not x.active]
+        games_to_prune = [x for x in self.__games if not x.game_active]
+        if sessions_to_prune or games_to_prune:
+            self.__logger.debug("Pruning {} sessions and {} games".format(len(sessions_to_prune), len(games_to_prune)))
+            self.__users = [x for x in self.__users if x.active]
+            self.__games = [x for x in self.__games if x.game_active]
+
     def stop(self):
         """
         Stop the matchmaking handler
@@ -133,9 +149,9 @@ class UserQueue:
         if self.__matchmaking_handler:
             self.__matchmaking_handler.stop()
         self.__logger.info("Stopping all running games")
-        [x.end_and_disconnect() for x in self.__games]
+        [x.end_and_disconnect() for x in self.__games if x.game_active]
         self.__logger.info("Disconnecting all users in queue")
-        [user.disconnect(force=True) for user in self.__users]
+        [user.disconnect(force=True) for user in self.__users if user.active]
 
     def __iter__(self):
         return self.__users.__iter__()
