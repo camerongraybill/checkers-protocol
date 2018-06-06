@@ -1,4 +1,8 @@
-""" This file contains the Session class which implements the server side of the Protocol """
+"""
+CS 544
+June 6, 2018
+This file contains the Session class which implements the server side of the Protocol
+"""
 
 from logging import Logger
 from struct import error as StructError

@@ -1,4 +1,6 @@
 """
+CS 544
+June 6, 2018
 This file contains the Interface class. It provides the basic hooks that the Client needs
 into the interface to get all the needed user input. Very basic interface.
 """

@@ -1,5 +1,9 @@
-""" This file contains the Game class which represents a game between two players.
-It implements the majority of the game logic. """
+"""
+CS 544
+June 6, 2018
+This file contains the Game class which represents a game between two players.
+It implements the majority of the game logic.
+"""
 
 from logging import Logger
 from random import choice

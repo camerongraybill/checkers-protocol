@@ -3,6 +3,9 @@
 See:
 https://packaging.python.org/en/latest/distributing.html
 https://github.com/pypa/sampleproject
+
+CS 544
+June 6, 2018
 """
 
 # To use a consistent encoding

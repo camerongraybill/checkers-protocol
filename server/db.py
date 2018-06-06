@@ -1,4 +1,6 @@
 """
+CS 544
+June 6, 2018
 This file contains the Database and DictionaryDB classes, which are used to store user information
 """
 from abc import ABC, abstractmethod

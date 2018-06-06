@@ -1,4 +1,8 @@
-""" This file contains the UserQueue class which is where users are placed while waiting for a game. """
+"""
+CS 544
+June 6, 2018
+This file contains the UserQueue class which is where users are placed while waiting for a game.
+"""
 
 from logging import Logger
 from typing import List, Tuple
@@ -136,6 +140,8 @@ class UserQueue:
         """
         sessions_to_prune = [x for x in self.__users if not x.active]
         games_to_prune = [x for x in self.__games if not x.game_active]
+        print([x.__dict__ for x in self.__users])
+        print([x.__dict__ for x in self.__games])
         if sessions_to_prune or games_to_prune:
             self.__logger.debug("Pruning {} sessions and {} games".format(len(sessions_to_prune), len(games_to_prune)))
             self.__users = [x for x in self.__users if x.active]

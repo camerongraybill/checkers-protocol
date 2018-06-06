@@ -1,4 +1,6 @@
 """
+CS 544
+June 6, 2018
 This file contains the Advertiser, which sends out broadcasts advertising the TCP server's existence
 """
 from logging import Logger

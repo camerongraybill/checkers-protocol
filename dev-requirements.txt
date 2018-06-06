@@ -1,3 +1,6 @@
+#CS 544
+#June 6, 2018
+
 coveralls
 pyyaml
 nose

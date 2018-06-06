@@ -1,4 +1,6 @@
 """
+CS 544
+June 6, 2018
 This file has the Server class. The Server class accepts incoming connections and creates sessions for them
 """
 

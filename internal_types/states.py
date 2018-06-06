@@ -1,4 +1,6 @@
 """
+CS 544
+June 6, 2018
 STATEFUL
 This file has the ProtocolState enum used in both the client and server
 to show what state of the protocol they are in

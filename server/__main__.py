@@ -1,4 +1,6 @@
 """
+CS 544
+June 6, 2018
 Main entrypoint for the server, is to be run from the command line.
 If the package was installed correctly with pip or setuptools, then this file will be executed with the "server" command
 Otherwise, it can be executed (from the root directory) with `python -m server`

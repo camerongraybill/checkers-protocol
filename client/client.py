@@ -1,4 +1,6 @@
 """
+CS 544
+June 6, 2018
 This file contains the Client class. The Client handles the TCP connection to the server,
 and protocol logic from the User's point of view
 """

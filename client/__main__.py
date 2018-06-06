@@ -1,4 +1,6 @@
 """
+CS 544
+June 6, 2018
 Main entrypoint for the application, is to be run from the command line.
 If the package was installed correctly with pip or setuptools, then this file will be executed with the "client" command
 Otherwise, it can be executed (from the root directory) with `python -m client`

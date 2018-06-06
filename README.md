@@ -3,11 +3,17 @@
 
 Project for CS 544 to create and implement a protocol, I chose to do checkers.
 
-to install:
+to install (while in a python 3.6 virtual environment):
 ```bash
 git clone
 cd python_tcp_checkers
 pip install -e .
+```
+
+to run (from inside the environment):
+```bash
+server # Run the server, listening on all interfaces port 8864
+client # Run the client, use service discovery to find a server on the local network
 ```
 
 

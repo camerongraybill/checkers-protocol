@@ -1,4 +1,6 @@
 """
+CS 544
+June 6, 2018
 This file has the custom types that were defined for the protocol
 """
 
