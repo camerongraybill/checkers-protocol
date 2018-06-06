@@ -3,6 +3,8 @@
 
 Project for CS 544 to create and implement a protocol, I chose to do checkers.
 
+All code (unless otherwise noted) written by Cameron Graybill.
+
 to install (while in a python 3.6 virtual environment):
 ```bash
 git clone

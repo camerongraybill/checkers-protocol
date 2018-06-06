@@ -104,9 +104,13 @@ def start():
         # Allocate a database and register some test users
         db = DictionaryDB(logger)
         db.register_user(b"cam", b"mac", 1200)
-        db.register_user(b"jen", b"nej", 1201)
+        db.register_user(b"jen", b"nej", 1200)
         db.register_user(b"kain", b"niak", 1200)
-        db.register_user(b"andrei", b"ierdna", 1199)
+        db.register_user(b"andrei", b"ierdna", 1200)
+        db.register_user(b"neil", b"lien", 1200)
+        db.register_user(b"safa", b"afas", 1200)
+        db.register_user(b"colbert", b"trebloc", 1200)
+        db.register_user(b"khanh", b"hnahk", 1200)
 
         # Allocate a Queue
         queue = UserQueue(logger)
