@@ -6,7 +6,6 @@ Otherwise, it can be executed (from the root directory) with `python -m server`
 from argparse import ArgumentParser, ArgumentError, Namespace
 from logging import getLogger, DEBUG, INFO, WARNING, basicConfig
 from signal import SIGINT
-from socket import inet_aton, error as socket_error
 from sys import exit as s_exit
 # Validate that the python version is at least 3.6
 from sys import version_info
@@ -32,19 +31,6 @@ def get_args() -> Namespace:
     :return: Parsed command line args
     """
 
-    def validate_ip_arg(ip: str) -> str:
-        """
-        Validate that an IP address is valid
-        Raise ArgumentError if the address is invalid
-        :param ip: ip address to validate, as xxx.xxx.xxx.xxx
-        :return: The same IP address
-        """
-        try:
-            inet_aton(ip)
-            return ip
-        except socket_error:
-            raise ArgumentError(None, "Invalid IP Address: {}".format(ip))
-
     def valid_port(port: str) -> int:
         """
         Validate that a port is valid
@@ -62,9 +48,9 @@ def get_args() -> Namespace:
             return port
 
     parser = ArgumentParser()
-    parser.add_argument("--broadcast-ip", type=validate_ip_arg, default="255.255.255.255",
+    parser.add_argument("--broadcast-ip", default="255.255.255.255",
                         help="The Broadcast address to send Service Discovery messages to (default: %(default)s)")
-    parser.add_argument("--listen-ip", type=validate_ip_arg, default="0.0.0.0",
+    parser.add_argument("--listen-ip", default="0.0.0.0",
                         help="The IP Address to listen for new connections on (default: %(default)s)")
     parser.add_argument("--verbose", action="store_true", default=False, help="Enable Debug Logging")
     parser.add_argument("--listen-port", type=valid_port, default="8864",

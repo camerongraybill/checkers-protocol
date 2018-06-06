@@ -12,6 +12,7 @@ from internal_types.types import Direction, Move, Board
 class Interface:
     """
     Basic user interface
+    UI
     """
 
     def display_message(self, message: str):

@@ -25,7 +25,7 @@ class Advertiser:
 
     def start(self, loop: Loop):
         """
-        Add the UDP socket and a Timer to the event loop which
+        Add the UDP socket and a Timer to the event loop
         :param loop: The Event Loop to bind the objects to
         """
         self.__logger.info("Registering Advertiser on {ip}:{port}".format(ip=self.__ip, port=self.__listen_port))
@@ -41,7 +41,7 @@ class Advertiser:
 
     def advertise(self, timer_handle: Timer):
         """
-        Send a UDP Packet to the port to show that this server is accepting connections to play checkers
+        Send a UDP Broadcast to the port to show that this server is accepting connections to play checkers
         :param timer_handle: The timer handle, unused
         """
         self.__logger.debug("Broadcasting existence to {ip}:{port}".format(ip=self.__broadcast_ip, port=self.__port))

@@ -57,6 +57,8 @@ class Client:
     def start(self, loop: Loop) -> None:
         """
         Attach the client to the event loop
+        CLIENT
+
         :param loop: Event Loop object to attach to
         """
         # Register the TCP client to connect to the server

@@ -31,15 +31,19 @@ class Server:
     def on_connection(self, handle: TCP, error: Optional[int]):
         """
         Called when a new user connects to the server
+        CONCURRENT
+        This function is called every time a new user connects,
+        and then passes off the TCP socket to a session object which handles it asynchronously
+        Internally, the PYUV library is using select to pick between
+
         :param handle: The TCP Server
         :param error: Where an error would be if there was an error connecting
         """
         if error is not None:
-            self.__logger.warning("Got {error},  {errno} when client attempted to connect to server".format(error=error,
-                                                                                                            errno=errno.strerror(
-                                                                                                                error)))
+            self.__logger.warning("Got {error}, {errno} when client attempted to connect to server".format(error=error,
+                                                                                                           errno=errno.strerror(
+                                                                                                               error)))
         else:
-
             new_connection = TCP(handle.loop)
             # Accept a connection
             handle.accept(new_connection)
@@ -51,6 +55,10 @@ class Server:
     def start(self, loop: Loop):
         """
         Start the Server on the loop
+        SERVICE
+        This is where the TCP Server binds to the event loop to start accepting new connections,
+        it is listening on the given ip address and port.
+        The default port is 8864
         :param loop: Loop to bind the server to
         """
         self.__logger.info("Listening on {ip}:{port} for new connections".format(ip=self.__ip, port=self.__port))
