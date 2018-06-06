@@ -5,13 +5,14 @@ and protocol logic from the User's point of view
 
 from logging import Logger
 from signal import SIGINT
+from struct import error as StructError
 from typing import Optional
 
-from pyuv import Loop, TCP, errno, Signal
+from pyuv import Loop, TCP, errno, Signal, Timer
 
 from internal_types.messages import Connect, Message, message_to_type, InvalidLogin, InvalidVersion, QueuePosition, \
     GameStart, LogOut, CompulsoryMove, InvalidMove, GameOver, OpponentDisconnect, YourTurn, MakeMove, ReQueue, \
-    NotEnoughData
+    NotEnoughData, InvalidType
 from internal_types.states import ProtocolState
 from internal_types.types import Move, Direction
 from .Interface import Interface
@@ -45,6 +46,11 @@ class Client:
         self.__protocol_state = ProtocolState.UNAUTHENTICATED
         self.__ui = interface
         self.__logger = logger
+        # Timeout settings
+        self.__in_timeout = False
+        self.__timeout_buffer = b""
+        self.__timeout_timer: Timer = None
+        self.__timeout_duration = 1
 
     # Public Methods
 
@@ -60,6 +66,9 @@ class Client:
         # Register the interrupt handler to catch sigint
         self.__interrupt_handle = Signal(loop)
         self.__interrupt_handle.start(self.__on_signal, SIGINT)
+
+        # Create the timeout handler
+        self.__timeout_timer = Timer(loop)
 
     def shutdown(self) -> None:
         """
@@ -130,25 +139,52 @@ class Client:
                 self.shutdown()
         else:
             # Parse the Message
+            if self.__timeout_buffer != b"":
+                data = self.__timeout_buffer + data
+                self.__timeout_buffer = b""
             try:
-                msg = message_to_type(data).parse_and_decode(data)
+                # Clear out the timeout buffer
+                if self.__in_timeout:
+                    self.__timeout_timer.stop()
+                    self.__in_timeout = False
+                while data != b"":
+                    msg = message_to_type(data).parse_and_decode(data)
+                    self.__logger.debug(
+                        "Got {message} in state {state}".format(message=msg, state=self.__protocol_state.name))
+                    data = data[msg.calc_size() + 1:]
+                    # Dispatch to another function based on current DFA state
+                    {
+                        ProtocolState.UNAUTHENTICATED: self.__msg_on_unauthenticated,
+                        ProtocolState.IN_QUEUE: self.__msg_on_in_queue,
+                        ProtocolState.PROCESSING_GAME_STATE: self.__msg_on_processing_game_state,
+                        ProtocolState.USER_MOVE: self.__msg_on_user_move,
+                        ProtocolState.GAME_END: self.__msg_on_game_end
+                    }[self.__protocol_state](msg)
             except NotEnoughData:
-                self.__logger.critical("Got invalid message ({raw}) from the server, shutting down".format(raw=data))
+                def timeout(timer_handle: Timer):
+                    self.__logger.critical(
+                        "Got invalid incomplete message ({raw}) from server, closing connections".format(
+                            raw=self.__timeout_buffer))
+                    self.shutdown()
+
+                # If already in timeout, restart the timer
+                if self.__in_timeout:
+                    self.__timeout_timer.stop()
+                # Append data to the buffer
+                self.__timeout_buffer += data
+                # Set in timeout
+                self.__in_timeout = True
+                # Start timer to close connection after timeout duration if needed
+                self.__timeout_timer.start(timeout, self.__timeout_duration, 0)
+            except InvalidType:
+                self.__logger.critical(
+                    "Got Invalid Message Type in message ({raw}) from server, closing connections".format(
+                        raw=data))
                 self.shutdown()
-            else:
-                self.__logger.debug(
-                    "Got {message} in state {state}".format(message=msg, state=self.__protocol_state.name))
-                # Dispatch to another function based on current DFA state
-                {
-                    ProtocolState.UNAUTHENTICATED: self.__msg_on_unauthenticated,
-                    ProtocolState.IN_QUEUE: self.__msg_on_in_queue,
-                    ProtocolState.PROCESSING_GAME_STATE: self.__msg_on_processing_game_state,
-                    ProtocolState.USER_MOVE: self.__msg_on_user_move,
-                    ProtocolState.GAME_END: self.__msg_on_game_end
-                }[self.__protocol_state](msg)
-                # If there is more data, keep parsing
-                if len(data) > msg.calc_size() + 1:
-                    self.__on_data(client, data[msg.calc_size():], None)
+            except StructError:
+                self.__logger.critical("Got Invalid Message ({raw}) from server, closing connections".format(
+                    raw=data))
+                self.shutdown()
 
     def __on_signal(self, sig_handler: Signal, signal: int) -> None:
         """

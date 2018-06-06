@@ -1,13 +1,14 @@
 """ This file contains the Session class which implements the server side of the Protocol """
 
 from logging import Logger
+from struct import error as StructError
 from typing import Optional
 
-from pyuv import TCP, errno
+from pyuv import TCP, errno, Timer
 
 from internal_types.messages import message_to_type, Message, Connect, InvalidLogin, InvalidVersion, QueuePosition, \
     LogOut, MakeMove, ReQueue, CompulsoryMove, YourTurn, InvalidMove, GameOver, OpponentDisconnect, GameStart, \
-    NotEnoughData
+    NotEnoughData, InvalidType
 from internal_types.states import ProtocolState
 from internal_types.types import Board, Move
 from .db import Database
@@ -40,6 +41,10 @@ class Session:
         self.__rating: int = None
         self.__username: bytes = None
         self.__logger = logger
+        self.__timeout_buffer = b""
+        self.__timeout_timer: Timer = Timer(handle.loop)
+        self.__in_timeout = False
+        self.__timeout_duration = 1
 
     # Public Methods
 
@@ -65,6 +70,9 @@ class Session:
                 game = self.__game
                 self.__game = None
                 game.user_disconnect(self)
+            if self.__timeout_timer is not None:
+                # If currently in timeout, stop the timer
+                self.__timeout_timer.stop()
             # Reset all session variables to defaults
             self.__rating = None
             self.__username = None
@@ -179,7 +187,7 @@ class Session:
     # Public Properties
     @property
     def username(self) -> str:
-        return self.__username.decode()
+        return self.__username.decode() if self.__username is not None else None
 
     @property
     def rating(self):
@@ -215,28 +223,55 @@ class Session:
                         strerror=errno.strerror(error), errno=error, username=self.username))
                 self.disconnect()
         else:
+            if self.__timeout_buffer != b"":
+                data = self.__timeout_buffer + data
+                self.__timeout_buffer = b""
             try:
-                msg = message_to_type(data).parse_and_decode(data)
-                self.__logger.debug(
-                    "Received {message} from user {user} with session in state {state}".format(message=msg,
-                                                                                               user=self.username or "(who is not logged in)",
-                                                                                               state=self.__current_state.name))
+                # Clear out the timeout stuff since data was received
+                if self.__in_timeout:
+                    self.__timeout_timer.stop()
+                    self.__in_timeout = False
+                while data != b"":
+                    msg = message_to_type(data).parse_and_decode(data)
+                    self.__logger.debug(
+                        "Received {message} from user {user} with session in state {state}".format(message=msg,
+                                                                                                   user=self.username or "(who is not logged in)",
+                                                                                                   state=self.__current_state.name))
+                    data = data[msg.calc_size() + 1:]
+                    # Call the correct callback based on current protocol state
+                    {
+                        ProtocolState.UNAUTHENTICATED: self.__msg_on_unauthenticated,
+                        ProtocolState.IN_QUEUE: self.__msg_on_in_queue,
+                        ProtocolState.PROCESSING_GAME_STATE: self.__msg_on_processing_game_state,
+                        ProtocolState.USER_MOVE: self.__msg_on_user_move,
+                        ProtocolState.GAME_END: self.__msg_on_game_end
+                    }[self.__current_state](msg)
             except NotEnoughData:
-                self.__logger.critical("Got invalid message ({raw}) from session {user}, shutting down".format(raw=data,
-                                                                                                               user=self.username))
+                def timeout(timer_handle: Timer):
+                    self.__logger.critical(
+                        "Got invalid incomplete message ({raw}) from session {user}, disconnecting user".format(
+                            raw=self.__timeout_buffer,
+                            user=self.username))
+                    self.disconnect()
+
+                # If already in timeout, restart the timer
+                if self.__in_timeout:
+                    self.__timeout_timer.stop()
+                # Append data to the buffer
+                self.__timeout_buffer = data
+                # Set in timeout
+                self.__in_timeout = True
+                # Start timer to close connection after timeout duration if needed
+                self.__timeout_timer.start(timeout, self.__timeout_duration, 0)
+            except InvalidType:
+                self.__logger.critical(
+                    "Got Invalid Message Type in message ({raw}) from session {user}, disconnecting user".format(
+                        raw=data, user=self.username), exc_info=True)
                 self.disconnect()
-            else:
-                # Call the correct callback based on current protocol state
-                {
-                    ProtocolState.UNAUTHENTICATED: self.__msg_on_unauthenticated,
-                    ProtocolState.IN_QUEUE: self.__msg_on_in_queue,
-                    ProtocolState.PROCESSING_GAME_STATE: self.__msg_on_processing_game_state,
-                    ProtocolState.USER_MOVE: self.__msg_on_user_move,
-                    ProtocolState.GAME_END: self.__msg_on_game_end
-                }[self.__current_state](msg)
-                # If there is more data, keep parsing
-                if len(data) > msg.calc_size() + 1:
-                    self.__on_data(client, data[msg.calc_size():], None)
+            except StructError:
+                self.__logger.critical("Got Invalid Message ({raw}) from session {user}, disconnecting user".format(
+                    raw=data, user=self.username))
+                self.disconnect()
 
     # State based event handlers
     # These functions implement the Server side of the DFA

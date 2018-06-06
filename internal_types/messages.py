@@ -73,6 +73,7 @@ class Message(ABC):
             raise NotEnoughData()
         if data[0] != cls.type:
             raise InvalidType()
+
         return cls(*unpack('<' + cls.fmt, data[1:cls.calc_size() + 1]))
 
     def encode(self) -> bytes:
@@ -420,4 +421,7 @@ def message_to_type(raw: bytes) -> Message:
     :param raw: The raw buffer of bytes, where the first byte is the message type
     :return: A Message constructor
     """
-    return __type_to_message[raw[0]]
+    try:
+        return __type_to_message[raw[0]]
+    except KeyError:
+        raise InvalidType()
