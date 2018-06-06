@@ -67,9 +67,9 @@ def get_args() -> Namespace:
 
     parser = ArgumentParser()
     parser.add_argument("--broadcast-ip", default="255.255.255.255", type=validate_ip_arg,
-                        help="The Broadcast address to send Service Discovery messages to (default: %(default)s)")
+                        help="The Broadcast address or hostname to send Service Discovery messages to (default: %(default)s)")
     parser.add_argument("--listen-ip", default="0.0.0.0", type=validate_ip_arg,
-                        help="The IP Address to listen for new connections on (default: %(default)s)")
+                        help="The IP Address or Hostname to listen for new connections on (default: %(default)s)")
     parser.add_argument("--verbose", action="store_true", default=False, help="Enable Debug Logging")
     parser.add_argument("--listen-port", type=valid_port, default="8864",
                         help="Port to listen on for incoming connections (default: %(default)s)")
