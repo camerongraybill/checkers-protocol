@@ -5,7 +5,7 @@ How to compile and run (assuming from linux command line):
 		virtualenv (available on tux, easily installable)
 	Steps to install:
 		1. Create a virtual environment and activate it
-			venv -p /path/to/python3.6 venv
+			virtualenv -p /path/to/python3.6 venv
 			source venv/bin/activate
 		2. Install the package
 			pip install -e /path/to/root/of/package # The folder with setup.py in it
@@ -14,11 +14,15 @@ How to compile and run (assuming from linux command line):
 			server # The executable should be in your path after installing the package
 			# The server will default to binding to all interfaces, TCP port 8864
 			# run server --help to see all configurable options
+		2. Stop the server
+			Send the server a signal to stop it, pressing "control-C" on your keyboard will cleanly shut down the server and close all connections.
 	Steps to run client:
 		1. Start the client
 			client # The executable should be in your path after installing the package
 			# The client will attempt to figure out the server's location using service discovery assuming it is running
 			# run client --help to see all configurable options
+		2. Stop the client
+			Send the client a signal to stop it, pressing "control-C" on your keyboard will cleanly shut down the client and send a LogOut message to the server, disconnecting it safely.
 	Example usernames and passwords (username, password):
 		cam, mac
 		jen, nej
